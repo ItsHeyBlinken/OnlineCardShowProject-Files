@@ -1,0 +1,7 @@
+
+# This is a project for a card marketplace
+# The project is built using React for the frontend and Node.js with Express for the backend, connected to a PostgreSQL database.
+
+# The project is a web application that allows users to buy and sell trading cards.
+# Users can create accounts, manage their profiles, and upgrade their accounts to become sellers.
+
