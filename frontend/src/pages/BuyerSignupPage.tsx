@@ -4,9 +4,11 @@ import { useHistory } from 'react-router-dom';
 import { Button } from '../components/ui/Button'; // Ensure the path is correct
 import { Input } from '../components/ui/Input'; // Ensure the path is correct
 import axios from 'axios';
+import { useAuth } from '../hooks/useAuth'; // Add this import
 
 export const BuyerSignupPage = () => {
   const history = useHistory();
+  const { login } = useAuth(); // Add this line
   const [formData, setFormData] = useState({
     name: '',
     username: '',
@@ -30,8 +32,13 @@ export const BuyerSignupPage = () => {
     try {
       const response = await axios.post('/api/signup', formData);
       setMessage(response.data.message);
-      // Redirect to the user's profile after successful sign-up
-      history.push(`/profile/${response.data.user.id}`);
+      
+      // Add these lines to automatically log in the user
+      const { token, user } = response.data;
+      localStorage.setItem('token', token);
+      login(user);
+      
+      history.push(`/profile/${user.id}`);
     } catch (error: any) {
       if (error.response) {
         setError(error.response.data.message);

@@ -5,17 +5,26 @@ import { useAuth } from '../hooks/useAuth';
 interface ProtectedRouteProps {
     children: React.ReactNode;
     path: string;
+    role?: string;
 }
 
-const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, path }) => {
-    const { user } = useAuth();
+const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, path, role }) => {
+    const { user, loading } = useAuth();
+
+    if (loading) {
+        return <div>Loading...</div>;
+    }
 
     return (
         <Route
             path={path}
-            render={({ location }) =>
+            render={({ location }) => 
                 user ? (
-                    children
+                    !role || user.role === role ? (
+                        children
+                    ) : (
+                        <Redirect to="/" />
+                    )
                 ) : (
                     <Redirect
                         to={{

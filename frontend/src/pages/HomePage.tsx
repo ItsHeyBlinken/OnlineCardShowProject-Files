@@ -1,8 +1,12 @@
 import { SellerCard } from '../components/cards/SellerCard'
 import { ProductCard } from '../components/cards/ProductCard'
 import { Seller } from '../types/Seller'
+import { Link } from 'react-router-dom'
+import { useAuth } from '../contexts/AuthContext'
 
 export const HomePage = () => {
+  const { user } = useAuth()
+
   // Mock data - replace with real data from your backend
   const featuredSellers: Seller[] = [
     { id: '1', name: 'Card Shop A', listing_count: 150, min_price: 10.00, rating: 4.5, sales: 200, image: 'https://via.placeholder.com/150' },
@@ -48,7 +52,21 @@ export const HomePage = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <main className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
+      <main className="container mx-auto px-4 py-8">
+        {/* Only show signup CTA to unauthenticated users */}
+        {!user && (
+          <div className="bg-indigo-600 text-white rounded-lg p-6 mb-8 text-center shadow-xl transition-shadow hover:shadow-2xl">
+            <h2 className="text-2xl font-bold mb-4">New to Card Show?</h2>
+            <p className="mb-4">Sign up to access exclusive deals and start building your collection</p>
+            <Link 
+              to="/signup"
+              className="inline-block bg-white text-indigo-600 px-6 py-3 rounded-md font-medium hover:bg-indigo-50 transition-colors"
+            >
+              Get Started
+            </Link>
+          </div>
+        )}
+
         <div className="grid grid-cols-12 gap-6">
           {/* Left Sidebar - Featured Sellers */}
           <div className="col-span-3 space-y-6">
@@ -71,7 +89,7 @@ export const HomePage = () => {
 
           {/* Main Content - Top Sellers */}
           <div className="col-span-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-6">Top Sellers of the Week</h2>
+            <h2 className="text-xl font-semibold text-gray-900 mb-6">Top Sales of the Week</h2>
             <div className="grid grid-cols-2 gap-6">
               {topSellers.map((product) => (
                 <ProductCard key={product.id} {...product} />
