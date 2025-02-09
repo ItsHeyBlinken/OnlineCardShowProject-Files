@@ -1,5 +1,6 @@
 const bcrypt = require('bcrypt');
 const pool = require('../db');
+const jwt = require('jsonwebtoken');
 
 const VALID_ROLES = ['buyer', 'seller'];
 
@@ -34,9 +35,22 @@ const signUpUser = async (req, res) => {
     );
 
     const newUser = result.rows[0];
+    const token = jwt.sign(
+      {
+        user: {
+          id: newUser.id,
+          email: newUser.email,
+          role: newUser.role
+        }
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: '24h' }
+    );
+
     res.status(201).json({
       message: 'User created successfully',
-      user: newUser
+      user: newUser,
+      token: token
     });
 
   } catch (error) {

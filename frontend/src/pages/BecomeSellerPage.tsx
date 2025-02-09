@@ -2,8 +2,10 @@ import React, { useState } from 'react';
 import { Button } from '../components/ui/Button';
 import axios from 'axios';
 import { useHistory } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 
 const BecomeSellerPage = () => {
+  const { checkAuth } = useAuth();
   const [formData, setFormData] = useState({
     storeName: '',
     description: '',
@@ -26,15 +28,16 @@ const BecomeSellerPage = () => {
         const response = await axios.post(
             '/api/auth/become-seller',
             formData,
-            {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            }
+            { headers: { 'Authorization': `Bearer ${token}` } }
         );
         
         if (response.data) {
-            history.push('/seller/dashboard');
+            localStorage.setItem('token', response.data.token);
+            await checkAuth();
+            
+            setTimeout(() => {
+                history.push('/seller/dashboard');
+            }, 100);
         }
     } catch (error) {
         console.error('Error becoming seller:', error);

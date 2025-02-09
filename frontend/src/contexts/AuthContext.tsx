@@ -18,7 +18,7 @@ interface AuthContextType {
   loading: boolean;
   login: (userData: User) => Promise<void>;
   logout: () => Promise<void>;
-  checkAuth: () => Promise<void>;
+  checkAuth: () => Promise<User | null>;
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -27,29 +27,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const checkAuth = async () => {
+  const checkAuth = async (): Promise<User | null> => {
     try {
       const token = localStorage.getItem('token');
       if (!token) {
         setUser(null);
-        return;
+        return null;
       }
 
       const response = await axios.get('/api/auth/user', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+        headers: { 'Authorization': `Bearer ${token}` }
       });
 
       if (response.data.user) {
-        setUser(response.data.user);
+        const userData = response.data.user;
+        setUser(userData);
+        return userData;
       }
+      return null;
     } catch (error) {
       console.error('Auth check failed:', error);
-      setUser(null);
       localStorage.removeItem('token');
-    } finally {
-      setLoading(false);
+      setUser(null);
+      return null;
     }
   };
 

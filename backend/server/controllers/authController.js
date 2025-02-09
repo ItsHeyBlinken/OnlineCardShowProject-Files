@@ -109,8 +109,17 @@ const becomeSeller = async (req, res) => {
       await client.query('COMMIT');
 
       const updatedUser = userResult.rows[0];
-      res.json({
-        message: 'Successfully upgraded to seller account',
+      
+      // Generate new token with updated role
+      const token = jwt.sign(
+        { user: { id: updatedUser.id, email: updatedUser.email, role: 'seller' } },
+        process.env.JWT_SECRET,
+        { expiresIn: '24h' }
+      );
+
+      res.json({ 
+        message: 'Successfully became a seller',
+        token, // Send new token
         user: updatedUser
       });
     } catch (error) {
@@ -121,7 +130,7 @@ const becomeSeller = async (req, res) => {
     }
   } catch (error) {
     console.error('Error becoming seller:', error);
-    res.status(500).json({ message: 'Server error while upgrading to seller' });
+    res.status(500).json({ message: 'Server error during role update' });
   }
 };
 
