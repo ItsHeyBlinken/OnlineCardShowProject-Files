@@ -11,6 +11,7 @@ export const OrderHistoryPage = () => {
     useEffect(() => {
         const fetchOrders = async () => {
             try {
+                if (!user) return;
                 const response = await axios.get(`/api/orders/user/${user.id}`);
                 setOrders(response.data);
             } catch (err) {
@@ -19,9 +20,8 @@ export const OrderHistoryPage = () => {
                 setLoading(false);
             }
         };
-
         fetchOrders();
-    }, [user.id]);
+    }, [user]);
 
     if (loading) return <div>Loading...</div>;
     if (error) return <div>{error}</div>;
