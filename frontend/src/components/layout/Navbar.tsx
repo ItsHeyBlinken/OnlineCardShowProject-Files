@@ -32,6 +32,9 @@ const Navbar = () => {
                             <Link to="/listings" className="text-gray-700 hover:text-gray-900">
                                 Browse Cards
                             </Link>
+                            <Link to="/subscription-tiers" className="text-gray-700 hover:text-gray-900">
+                                Pricing
+                            </Link>
                         </div>
                         <div className="ml-auto max-w-xs w-full">
                             <input
