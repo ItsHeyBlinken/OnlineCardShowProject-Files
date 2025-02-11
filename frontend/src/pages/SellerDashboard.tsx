@@ -8,6 +8,8 @@ interface DashboardStats {
     activeListings: number;
     pendingOrders: number;
     monthlyRevenue: number;
+    subscriptionTier?: string;
+    maxListings?: number;
 }
 
 const SellerDashboard = () => {
@@ -27,6 +29,16 @@ const SellerDashboard = () => {
         fetchDashboardStats();
         checkListings();
     }, []);
+
+    const getMaxListings = (tier: string) => {
+        switch (tier) {
+            case 'Basic': return 25;
+            case 'Starter': return 100;
+            case 'Pro': return 250;
+            case 'Premium': return 999999; // Effectively unlimited
+            default: return 25;
+        }
+    };
 
     const fetchDashboardStats = async () => {
         try {
@@ -59,9 +71,14 @@ const SellerDashboard = () => {
             console.log('Dashboard Response:', response.data);
             console.log('Listings Response:', listingsResponse.data);
 
+            const tier = response.data.subscriptionTier || 'Basic';
+            const maxListings = getMaxListings(tier);
+
             setStats({
                 ...response.data,
-                activeListings: listingsResponse.data.length || 0
+                activeListings: listingsResponse.data.length || 0,
+                subscriptionTier: tier,
+                maxListings
             });
             setError('');
         } catch (err: any) {
@@ -230,6 +247,54 @@ const SellerDashboard = () => {
                                     </dl>
                                 </div>
                             </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Add Subscription Info Card */}
+                <div className="mt-8 bg-white overflow-hidden shadow rounded-lg">
+                    <div className="p-5">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <h3 className="text-lg font-medium text-gray-900">
+                                    Subscription Status
+                                </h3>
+                                <p className="mt-1 text-sm text-gray-500">
+                                    Current Plan: <span className="font-medium">{stats.subscriptionTier}</span>
+                                </p>
+                                <div className="mt-2">
+                                    <div className="flex items-center">
+                                        <div className="flex-1">
+                                            <div className="relative pt-1">
+                                                <div className="flex mb-2 items-center justify-between">
+                                                    <div>
+                                                        <span className="text-xs font-semibold inline-block text-blue-600">
+                                                            Listing Usage
+                                                        </span>
+                                                    </div>
+                                                    <div className="text-right">
+                                                        <span className="text-xs font-semibold inline-block text-blue-600">
+                                                            {stats.activeListings} / {stats.maxListings}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                                <div className="overflow-hidden h-2 mb-4 text-xs flex rounded bg-blue-200">
+                                                    <div 
+                                                        style={{ width: `${(stats.activeListings / (stats.maxListings || 1)) * 100}%` }}
+                                                        className="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-blue-600"
+                                                    />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <Link 
+                                to="/seller/subscription" 
+                                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
+                            >
+                                Manage Subscription
+                            </Link>
                         </div>
                     </div>
                 </div>
