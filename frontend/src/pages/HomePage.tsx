@@ -1,97 +1,147 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-import { SellerCard } from '../components/cards/SellerCard'
-import { ProductCard } from '../components/cards/ProductCard'
-import { Seller } from '../types/Seller'
-import { Link } from 'react-router-dom'
-import { useAuth } from '../contexts/AuthContext'
+import { Link } from 'react-router-dom';
 
-export const HomePage = () => {
-  const { user } = useAuth()
-  const [featuredSellers, setFeaturedSellers] = useState<Seller[]>([])
-  const [dealsAndSteals, setDealsAndSteals] = useState<any[]>([])
-  const [topSellers, setTopSellers] = useState<any[]>([])
+// Add new interface for Seller
+interface Seller {
+    id: number;
+    username: string;
+    email: string;
+    rating: number;
+    image_url: string | null;
+    listing_count: number;
+    avg_price: number;
+}
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [sellersResponse, dealsResponse, topSellersResponse] = await Promise.all([
-          axios.get('/api/sellers/featured'),
-          axios.get('/api/deals'),
-          axios.get('/api/sellers/top'),
-        ]);
+interface Listing {
+    id: number;
+    title: string;
+    price: string;
+    image_url: string | null;
+    seller_name: string;
+    seller_id: number;
+}
 
-        setFeaturedSellers(sellersResponse.data);
-        setDealsAndSteals(dealsResponse.data);
-        setTopSellers(topSellersResponse.data);
-      } catch (error) {
-        console.error('Error fetching data:', error);
-      }
+const HomePage: React.FC = () => {
+    const [featuredSellers, setFeaturedSellers] = useState<Seller[]>([]);
+    const [topSellers, setTopSellers] = useState<Listing[]>([]);
+    const [deals, setDeals] = useState<Listing[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState('');
+
+    useEffect(() => {
+        const fetchData = async () => {
+            try {
+                setLoading(true);
+                const [featuredRes, topRes, dealsRes] = await Promise.all([
+                    axios.get('/api/sellers/featured'),
+                    axios.get('/api/sellers/top'),
+                    axios.get('/api/sellers/deals')
+                ]);
+
+                setFeaturedSellers(featuredRes.data);
+                setTopSellers(topRes.data);
+                setDeals(dealsRes.data);
+            } catch (err) {
+                console.error('Error fetching data:', err);
+                setError('Failed to load content');
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchData();
+    }, []);
+
+    const formatRating = (rating: any) => {
+        if (!rating) return 'No ratings';
+        const numRating = Number(rating);
+        return isNaN(numRating) ? 'No ratings' : numRating.toFixed(1);
     };
 
-    fetchData();
-  }, []);
+    if (loading) return <div className="text-center py-8">Loading...</div>;
+    if (error) return <div className="text-center py-8 text-red-600">{error}</div>;
 
-  return (
-    <div className="min-h-screen bg-gray-50">
-      <main className="container mx-auto px-4 py-8">
-        {/* Only show signup CTA to unauthenticated users */}
-        {!user && (
-          <div className="bg-indigo-600 text-white rounded-lg p-6 mb-8 text-center shadow-xl transition-shadow hover:shadow-2xl">
-            <h2 className="text-2xl font-bold mb-4">New to Card Show?</h2>
-            <p className="mb-4">Sign up to access exclusive deals and start building your collection</p>
-            <Link 
-              to="/signup"
-              className="inline-block bg-white text-indigo-600 px-6 py-3 rounded-md font-medium hover:bg-indigo-50 transition-colors"
-            >
-              Get Started
-            </Link>
-          </div>
-        )}
+    return (
+        <div className="min-h-screen bg-gray-100">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                <div className="grid grid-cols-4 gap-6">
+                    {/* Featured Sellers - Left Column */}
+                    <div className="col-span-1">
+                        <h2 className="text-2xl font-bold mb-6">Featured Sellers</h2>
+                        <div className="space-y-6">
+                            {featuredSellers.map((seller) => (
+                                <div key={seller.id} className="bg-white rounded-lg shadow p-4">
+                                    <img 
+                                        src={seller.image_url || '/placeholder.png'} 
+                                        alt={seller.username}
+                                        className="w-full h-48 object-cover rounded-md mb-4"
+                                    />
+                                    <h3 className="text-lg font-semibold">{seller.username}</h3>
+                                    <div className="mt-2 space-y-1">
+                                        <div className="flex items-center">
+                                            <span className="text-yellow-400 mr-1">
+                                                ★
+                                            </span>
+                                            <span className="text-gray-600">
+                                                {formatRating(seller.rating)}
+                                            </span>
+                                        </div>
+                                        <p className="text-sm text-gray-500">
+                                            {seller.listing_count || 0} {(seller.listing_count === 1) ? 'listing' : 'listings'}
+                                        </p>
+                                        {Number(seller.avg_price) > 0 && (
+                                            <p className="text-sm text-gray-500">
+                                                Avg. Price: ${Number(seller.avg_price).toFixed(2)}
+                                            </p>
+                                        )}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
 
-        <div className="grid grid-cols-12 gap-6">
-          {/* Left Sidebar - Featured Sellers */}
-          <div className="col-span-3 space-y-6">
-            <h2 className="text-xl font-semibold text-gray-900">Featured Sellers</h2>
-            <div className="space-y-4">
-              {featuredSellers.map((seller: Seller) => (
-                <SellerCard
-                    key={seller.id}
-                    id={seller.id}
-                    name={seller.name}
-                    listing_count={seller.listing_count}
-                    min_price={seller.min_price}
-                    rating={seller.rating}
-                    sales={seller.sales}
-                    image={seller.image}
-                />
-              ))}
+                    {/* Top Sellers - Center 2x2 Grid */}
+                    <div className="col-span-2">
+                        <h2 className="text-2xl font-bold mb-6">Top Sellers</h2>
+                        <div className="grid grid-cols-2 gap-6">
+                            {topSellers.map((item) => (
+                                <div key={item.id} className="bg-white rounded-lg shadow p-4">
+                                    <img 
+                                        src={item.image_url || '/placeholder.png'} 
+                                        alt={item.title}
+                                        className="w-full h-48 object-cover rounded-md mb-4"
+                                    />
+                                    <h3 className="text-lg font-semibold">{item.title}</h3>
+                                    <p className="text-gray-600">${item.price}</p>
+                                    <p className="text-sm text-gray-500">Seller: {item.seller_name}</p>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Deals - Right Column */}
+                    <div className="col-span-1">
+                        <h2 className="text-2xl font-bold mb-6">Deals & Steals</h2>
+                        <div className="space-y-6">
+                            {deals.map((item) => (
+                                <div key={item.id} className="bg-white rounded-lg shadow p-4">
+                                    <img 
+                                        src={item.image_url || '/placeholder.png'} 
+                                        alt={item.title}
+                                        className="w-full h-48 object-cover rounded-md mb-4"
+                                    />
+                                    <h3 className="text-lg font-semibold">{item.title}</h3>
+                                    <p className="text-gray-600">${item.price}</p>
+                                    <p className="text-sm text-gray-500">Seller: {item.seller_name}</p>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
             </div>
-          </div>
-
-          {/* Main Content - Top Sellers */}
-          <div className="col-span-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-6">Top Sales of the Week</h2>
-            <div className="grid grid-cols-2 gap-6">
-              {topSellers.map((product) => (
-                <ProductCard key={product.id} {...product} />
-              ))}
-            </div>
-          </div>
-
-          {/* Right Sidebar - Deals and Steals */}
-          <div className="col-span-3 space-y-6">
-            <h2 className="text-xl font-semibold text-gray-900">Deals & Steals</h2>
-            <div className="space-y-4">
-              {dealsAndSteals.map((product) => (
-                <ProductCard key={product.id} {...product} />
-              ))}
-            </div>
-          </div>
         </div>
-      </main>
-    </div>
-  )
-}
+    );
+};
 
 export default HomePage;

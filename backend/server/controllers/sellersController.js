@@ -2,46 +2,55 @@ const pool = require('../db');
 
 const getFeaturedSellers = async (req, res) => {
     try {
-        const result = await pool.query(`
-            SELECT 
+        const result = await pool.query(
+            `SELECT 
                 u.id,
-                u.username as name,
+                u.username,
+                u.email,
+                sp.rating,
+                sp.image_url,
                 COUNT(l.id) as listing_count,
-                MIN(l.price) as min_price,
-                COALESCE(sp.rating, 0) as rating,
-                COUNT(DISTINCT o.id) as sales,
-                COALESCE(sp.image_url, 'https://via.placeholder.com/150') as image
+                COALESCE(AVG(l.price), 0) as avg_price
             FROM users u
             LEFT JOIN seller_profiles sp ON u.id = sp.user_id
-            LEFT JOIN listings l ON u.id = l.seller_id
-            LEFT JOIN orders o ON l.id = o.listing_id
+            INNER JOIN listings l ON u.id = l.seller_id
             WHERE u.role = 'seller'
-            GROUP BY u.id, u.username, sp.rating, sp.image_url
-            ORDER BY sales DESC
-            LIMIT 3
-        `);
+                AND l.active = true
+            GROUP BY u.id, u.username, u.email, sp.rating, sp.image_url
+            HAVING COUNT(l.id) > 0
+            ORDER BY RANDOM()
+            LIMIT 3`
+        );
+
+        console.log('Featured sellers result:', {
+            count: result.rows.length,
+            data: result.rows
+        });
+
         res.json(result.rows);
     } catch (error) {
         console.error('Error fetching featured sellers:', error);
-        res.status(500).json({ message: 'Server error' });
+        res.status(500).json({ message: 'Server error', error: error.message });
     }
 };
 
 const getTopSellers = async (req, res) => {
     try {
-        const result = await pool.query(`
-            SELECT 
+        const result = await pool.query(
+            `SELECT 
                 l.id,
                 l.title,
                 l.price,
-                l.image_url as image,
-                u.username as seller
+                l.image_url,
+                u.username as seller_name,
+                u.id as seller_id
             FROM listings l
             JOIN users u ON l.seller_id = u.id
-            WHERE l.created_at >= NOW() - INTERVAL '7 days'
-            ORDER BY l.price DESC
-            LIMIT 4
-        `);
+            WHERE l.active = true
+            ORDER BY RANDOM()
+            LIMIT 4`
+        );
+
         res.json(result.rows);
     } catch (error) {
         console.error('Error fetching top sellers:', error);
@@ -49,7 +58,32 @@ const getTopSellers = async (req, res) => {
     }
 };
 
+const getDeals = async (req, res) => {
+    try {
+        const result = await pool.query(
+            `SELECT 
+                l.id,
+                l.title,
+                l.price,
+                l.image_url,
+                u.username as seller_name,
+                u.id as seller_id
+            FROM listings l
+            JOIN users u ON l.seller_id = u.id
+            WHERE l.active = true
+            ORDER BY RANDOM()
+            LIMIT 2`
+        );
+
+        res.json(result.rows);
+    } catch (error) {
+        console.error('Error fetching deals:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+
 module.exports = {
     getFeaturedSellers,
-    getTopSellers
-}; 
+    getTopSellers,
+    getDeals
+};
