@@ -8,7 +8,7 @@ import HomePage from './pages/HomePage';
 import { ProfilePage } from './pages/ProfilePage';
 import SellerStorefrontPage from './pages/SellerStorefrontPage';
 import { SellerCustomizationPage } from './pages/SellerCustomizationPage';
-import { BuyerSignupPage } from './pages/BuyerSignupPage';
+import BuyerSignupPage from './pages/BuyerSignupPage';
 import ListingsPage from './pages/ListingsPage';
 import { CartPage } from './pages/CartPage';
 import BecomeSellerPage from './pages/BecomeSellerPage';
@@ -30,7 +30,7 @@ const App = () => {
             <Switch>
               <Route path="/" exact component={HomePage} />
               <Route path="/login" component={LoginPage} />
-              <Route path="/signup" component={BuyerSignupPage} />
+              <Route path="/signup/buyer" component={BuyerSignupPage} />
               <Route
                 path="/profile"
                 render={() => (
