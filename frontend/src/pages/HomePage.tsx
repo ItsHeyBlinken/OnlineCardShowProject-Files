@@ -1,3 +1,5 @@
+import React, { useEffect, useState } from 'react';
+import axios from 'axios';
 import { SellerCard } from '../components/cards/SellerCard'
 import { ProductCard } from '../components/cards/ProductCard'
 import { Seller } from '../types/Seller'
@@ -6,49 +8,29 @@ import { useAuth } from '../contexts/AuthContext'
 
 export const HomePage = () => {
   const { user } = useAuth()
+  const [featuredSellers, setFeaturedSellers] = useState<Seller[]>([])
+  const [dealsAndSteals, setDealsAndSteals] = useState<any[]>([])
+  const [topSellers, setTopSellers] = useState<any[]>([])
 
-  // Mock data - replace with real data from your backend
-  const featuredSellers: Seller[] = [
-    { id: '1', name: 'Card Shop A', listing_count: 150, min_price: 10.00, rating: 4.5, sales: 200, image: 'https://via.placeholder.com/150' },
-    { id: '2', name: 'Collector B', listing_count: 75, min_price: 5.00, rating: 4.0, sales: 150, image: 'https://via.placeholder.com/150' },
-    { id: '3', name: 'Trading Post C', listing_count: 200, min_price: 8.00, rating: 4.8, sales: 300, image: 'https://via.placeholder.com/150' },
-  ]
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [sellersResponse, dealsResponse, topSellersResponse] = await Promise.all([
+          axios.get('/api/sellers/featured'),
+          axios.get('/api/deals'),
+          axios.get('/api/sellers/top'),
+        ]);
 
-  const dealsAndSteals = [
-    {
-      id: '1',
-      title: 'Rare Baseball Card Collection',
-      price: 299.99,
-      discount: 20,
-      image: 'https://images.unsplash.com/photo-1584714268709-c3dd9c92b378?auto=format&fit=crop&w=800&q=80',
-      seller: 'Premium Cards',
-    },
-    {
-      id: '2',
-      title: 'Limited Edition Trading Cards',
-      price: 149.99,
-      discount: 15,
-      image: 'https://images.unsplash.com/photo-1606503153255-59d5e417e3f3?auto=format&fit=crop&w=800&q=80',
-      seller: 'Vintage Collections',
-    },
-  ]
+        setFeaturedSellers(sellersResponse.data);
+        setDealsAndSteals(dealsResponse.data);
+        setTopSellers(topSellersResponse.data);
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      }
+    };
 
-  const topSellers = [
-    {
-      id: '1',
-      title: 'Mint Condition Classic Card',
-      price: 499.99,
-      image: 'https://images.unsplash.com/photo-1622037022824-0c71d511ef3c?auto=format&fit=crop&w=800&q=80',
-      seller: 'Elite Cards',
-    },
-    {
-      id: '2',
-      title: 'Special Edition Set',
-      price: 299.99,
-      image: 'https://images.unsplash.com/photo-1585504198199-20277593b94f?auto=format&fit=crop&w=800&q=80',
-      seller: 'Card Masters',
-    },
-  ]
+    fetchData();
+  }, []);
 
   return (
     <div className="min-h-screen bg-gray-50">
