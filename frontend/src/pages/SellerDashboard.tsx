@@ -314,7 +314,7 @@ const SellerDashboard = () => {
 
                 {/* Quick Actions - Only show if there are listings */}
                 {stats.activeListings > 0 && (
-                    <div className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                    <div className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
                         <Link to="/manage-listings" className="block">
                             <div className="border border-gray-200 rounded-lg p-6 hover:border-indigo-500 transition-colors">
                                 <h3 className="text-lg font-medium text-gray-900">Manage Listings</h3>
@@ -338,6 +338,15 @@ const SellerDashboard = () => {
                                 <h3 className="text-lg font-medium text-gray-900">Analytics</h3>
                                 <p className="mt-2 text-sm text-gray-500">
                                     View your sales analytics and reports
+                                </p>
+                            </div>
+                        </Link>
+
+                        <Link to="/inbox" className="block">
+                            <div className="border border-gray-200 rounded-lg p-6 hover:border-indigo-500 transition-colors">
+                                <h3 className="text-lg font-medium text-gray-900">Messages</h3>
+                                <p className="mt-2 text-sm text-gray-500">
+                                    View and respond to buyer messages
                                 </p>
                             </div>
                         </Link>

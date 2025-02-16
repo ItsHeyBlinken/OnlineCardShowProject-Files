@@ -328,6 +328,26 @@ export const ProfilePage = () => {
             </Link>
           </div>
         </div>
+
+        {/* Navigation Section */}
+        <div className="mt-6 bg-white shadow rounded-lg">
+          <div className="px-4 py-5 sm:p-6">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {/* Existing navigation items */}
+
+              {/* Messages Link */}
+              <Link
+                to="/inbox"
+                className="block p-4 border border-gray-200 rounded-lg hover:border-indigo-500 transition-colors"
+              >
+                <h3 className="text-lg font-medium text-gray-900">Messages</h3>
+                <p className="mt-2 text-sm text-gray-500">
+                  View your conversations with buyers and sellers
+                </p>
+              </Link>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
