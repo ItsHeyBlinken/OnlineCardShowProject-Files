@@ -20,6 +20,7 @@ const cartRoutes = require('./routes/cart');
 const listingsRoutes = require('./routes/listings');
 const sellerRoutes = require('./routes/seller');
 const storesRoutes = require('./routes/stores');
+const sellersRouter = require('./routes/sellers'); // Adjust the path as necessary
 
 // Middleware
 app.use(cors());
@@ -40,6 +41,7 @@ app.use('/api', searchRoutes);
 app.use('/api', cartRoutes);
 app.use('/api/seller', auth, sellerRoutes);
 app.use('/api/stores', storesRoutes);
+app.use('/api/sellers', sellersRouter); // This will prefix all routes in sellersRouter with /api/sellers
 
 // Basic test route
 app.get('/', (req, res) => {
