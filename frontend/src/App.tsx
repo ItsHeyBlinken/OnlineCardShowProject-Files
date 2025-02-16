@@ -18,6 +18,7 @@ import SellerDashboard from './pages/SellerDashboard';
 import CreateListingPage from './pages/CreateListingPage';
 import SubscriptionTiers from './pages/Subscription-Tiers';
 import SubscriptionManagementPage from './pages/SubscriptionManagementPage';
+import InboxPage from './pages/InboxPage';
 
 const App = () => {
   return (
@@ -111,6 +112,7 @@ const App = () => {
                   </ProtectedRoute>
                 )}
               />
+              <Route path="/inbox" component={InboxPage} />
               <Route path="*" component={() => <h1>404 Not Found</h1>} />
             </Switch>
           </main>
