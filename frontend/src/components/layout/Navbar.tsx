@@ -88,12 +88,20 @@ const Navbar = () => {
                                 </div>
                             </div>
                         ) : (
-                            <Link
-                                to="/login"
-                                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700"
-                            >
-                                Login
-                            </Link>
+                            <div className="flex space-x-4">
+                                <Link
+                                    to="/signup/buyer"
+                                    className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700"
+                                >
+                                    Sign Up
+                                </Link>
+                                <Link
+                                    to="/login"
+                                    className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700"
+                                >
+                                    Login
+                                </Link>
+                            </div>
                         )}
                     </div>
                 </div>

@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { Button } from '../components/ui/Button';
 import axios from 'axios';
 import { useHistory } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -15,7 +14,7 @@ const BecomeSellerPage = () => {
   const history = useHistory();
   const [error, setError] = useState('');
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value,
@@ -25,10 +24,12 @@ const BecomeSellerPage = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const response = await axios.post('/api/become-seller', {
+      await axios.post('/api/become-seller', {
         ...formData,
         subscriptionTier: formData.selectedTier
       });
+      
+      await checkAuth();
       
       if (formData.selectedTier !== 'Basic') {
         history.push('/subscription/checkout', { 

@@ -57,9 +57,9 @@ const getCurrentUser = async (req, res) => {
     }
 
     const userResult = await pool.query(
-      'SELECT id, name, username, email, created_at FROM users WHERE id = $1',
+      'SELECT id, name, username, email, role, created_at FROM users WHERE id = $1',
       [req.user.id]
-  );
+    );
     
     const user = userResult.rows[0];
     if (!user) {
@@ -72,8 +72,8 @@ const getCurrentUser = async (req, res) => {
       name: user.name,
       username: user.username,
       email: user.email,
+      role: user.role,
       created_at: user.created_at
-
     });
   } catch (error) {
     console.error('Error getting current user:', error);

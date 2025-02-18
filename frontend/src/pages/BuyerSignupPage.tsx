@@ -1,15 +1,15 @@
 import React, { useState } from 'react';
 import { useHistory } from 'react-router-dom';
 // Removed unused imports
-import { Button } from '../components/ui/Button'; // Ensure the path is correct
-import { Input } from '../components/ui/Input'; // Ensure the path is correct
 import axios from 'axios';
-import { useAuth } from '../hooks/useAuth'; // Add this import
+import { useAuth } from '../hooks/useAuth'; // Add this import  
+
 
 const BuyerSignupPage: React.FC = () => {
   const history = useHistory();
-  const { login } = useAuth(); // Add this line
+  const { checkAuth } = useAuth(); // Only keep what's needed
   const [formData, setFormData] = useState({
+    name: '',
     username: '',
     email: '',
     password: '',
@@ -36,17 +36,14 @@ const BuyerSignupPage: React.FC = () => {
 
     try {
       const response = await axios.post('/api/auth/register', {
-        username: formData.username,
-        email: formData.email,
-        password: formData.password,
+        ...formData,
         role: 'buyer'
       });
 
-      // Store token
       const { token } = response.data;
       localStorage.setItem('token', token);
       
-      // Redirect to profile or home page
+      await checkAuth();
       history.push('/profile');
     } catch (error: any) {
       console.error('Registration error:', error);
@@ -71,6 +68,23 @@ const BuyerSignupPage: React.FC = () => {
           )}
 
           <form className="space-y-6" onSubmit={handleSubmit}>
+          <div>
+              <label htmlFor="name" className="block text-sm font-medium text-gray-700">
+                Name
+              </label>
+              <div className="mt-1">
+                <input
+                  id="name"
+                  name="name"
+                  type="text"
+                  required
+                  value={formData.name}
+                  onChange={handleChange}
+                  className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                />
+              </div>
+            </div>
+            
             <div>
               <label htmlFor="username" className="block text-sm font-medium text-gray-700">
                 Username
