@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import axios from 'axios';
 
-
 export const ProfilePage = () => {
   const { user, loading, checkAuth, login } = useAuth();
   const [error, setError] = useState('');
@@ -22,10 +21,12 @@ export const ProfilePage = () => {
 
   // Format date helper function
   const formatDate = (dateString: string | null | undefined) => {
+    console.log('Formatting date:', dateString);
     if (!dateString) return 'N/A';
     try {
       return new Date(dateString).toLocaleDateString();
     } catch (error) {
+      console.error('Date formatting error:', error);
       return 'Invalid Date';
     }
   };
@@ -94,11 +95,11 @@ export const ProfilePage = () => {
         
         if (response.data.user) {
             console.log('Updated user data:', response.data.user);
-            await login(response.data.user);
+            // Assuming login function requires two arguments: user and token
+            await login(response.data.user, token);
             
             // Force a refresh of the auth context
             await checkAuth();
-            
             setSuccess('Successfully became a seller!');
             setShowSellerForm(false);
             
@@ -147,8 +148,14 @@ export const ProfilePage = () => {
 
   if (!user) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-lg text-gray-600">Please log in to view your profile.</p>
+      <div className="min-h-screen flex flex-col items-center justify-center">
+        <h2 className="text-2xl font-bold mb-4">Please sign up to continue</h2>
+        <Link 
+          to="/signup"
+          className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 transition-colors"
+        >
+          Sign Up
+        </Link>
       </div>
     );
   }
@@ -156,7 +163,7 @@ export const ProfilePage = () => {
   return (
     <div className="min-h-screen bg-gray-50 py-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <h1 className="text-3xl font-bold text-gray-900">Welcome, {user.username}</h1>
+        <h1 className="text-3xl font-bold text-gray-900">Welcome, {user?.username}</h1>
         <div className="mt-8">
           <h2 className="text-lg font-medium text-gray-900">Your Profile</h2>
           <div className="bg-white shadow overflow-hidden sm:rounded-lg">

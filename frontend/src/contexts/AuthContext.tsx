@@ -1,10 +1,10 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 
 interface User {
   id: number;
-  name: string;
   email: string;
+  name: string;
   username: string;
   role: string;
   created_at: string;
@@ -15,6 +15,7 @@ interface User {
 
 interface AuthContextType {
   user: User | null;
+  loading: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
   checkAuth: () => Promise<void>;
@@ -24,11 +25,7 @@ export const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export const AuthProvider: React.FC = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-
-  useEffect(() => {
-    // Check authentication status when component mounts
-    checkAuth();
-  }, []);
+  const [loading, setLoading] = useState(false);
 
   const login = async (email: string, password: string) => {
     try {
@@ -55,26 +52,30 @@ export const AuthProvider: React.FC = ({ children }) => {
     setUser(null);
   };
 
-  const checkAuth = async () => {
+  const checkAuth = useCallback(async () => {
     const token = localStorage.getItem('token');
     if (token) {
       try {
-        // Set the token in axios defaults
+        setLoading(true);
         axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-        
-        // Verify token with backend
-        const response = await axios.get('/api/auth/me');
+        const response = await axios.get('/api/auth/user');
+        console.log('User data from checkAuth:', response.data);
         setUser(response.data);
       } catch (error) {
         console.error('Auth check error:', error);
-        // Clear invalid token
         logout();
+      } finally {
+        setLoading(false);
       }
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    checkAuth();
+  }, [checkAuth]);
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, checkAuth }}>
+    <AuthContext.Provider value={{ user, loading, login, logout, checkAuth }}>
       {children}
     </AuthContext.Provider>
   );

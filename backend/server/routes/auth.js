@@ -25,7 +25,7 @@ router.post('/login', async (req, res) => {
 
         // Get user from database
         const result = await pool.query(
-            'SELECT id, email, username, role, password_hash FROM users WHERE email = $1',
+            'SELECT id, email, username, name, role, password_hash FROM users WHERE email = $1',
             [email]
         );
 
@@ -87,10 +87,8 @@ router.post('/logout', logoutUser);
 router.get('/user', auth, async (req, res) => {
     try {
         const userId = req.user.id;
-        console.log('Fetching user:', userId);
-
         const result = await pool.query(
-            'SELECT id, username, email, role FROM users WHERE id = $1',
+            'SELECT id, name, username, email, role, created_at FROM users WHERE id = $1',
             [userId]
         );
 
@@ -98,10 +96,9 @@ router.get('/user', auth, async (req, res) => {
             return res.status(404).json({ message: 'User not found' });
         }
 
-        console.log('User found:', result.rows[0]);
         res.json(result.rows[0]);
     } catch (error) {
-        console.error('Error fetching user:', error);
+        console.error('Get user error:', error);
         res.status(500).json({ message: 'Server error' });
     }
 });
@@ -186,7 +183,7 @@ router.post('/reset-password', async (req, res) => {
 // Add registration route - this should NOT require authentication
 router.post('/register', async (req, res) => {
     try {
-        const { email, password, username, role } = req.body;
+        const { email, password, username, name, role } = req.body;
 
         console.log('Registration attempt:', { email, username, role }); // Debug log
 
@@ -205,10 +202,10 @@ router.post('/register', async (req, res) => {
 
         // Insert new user with password_hash
         const result = await pool.query(
-            `INSERT INTO users (email, password_hash, username, role) 
-             VALUES ($1, $2, $3, $4) 
-             RETURNING id, email, username, role`,
-            [email, hashedPassword, username, role || 'buyer']
+            `INSERT INTO users (email, password_hash, username, name, role) 
+             VALUES ($1, $2, $3, $4, $5) 
+             RETURNING id, email, username, name, role`,
+            [email, hashedPassword, username, name, role || 'buyer']
         );
 
         const newUser = result.rows[0];

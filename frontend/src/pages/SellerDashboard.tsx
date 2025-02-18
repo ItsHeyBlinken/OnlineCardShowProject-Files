@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useHistory } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import axios from 'axios';
@@ -25,11 +25,6 @@ const SellerDashboard = () => {
     const history = useHistory();
     const [hasListings, setHasListings] = useState(false);
 
-    useEffect(() => {
-        fetchDashboardStats();
-        checkListings();
-    }, []);
-
     const getMaxListings = (tier: string) => {
         switch (tier) {
             case 'Basic': return 25;
@@ -40,7 +35,7 @@ const SellerDashboard = () => {
         }
     };
 
-    const fetchDashboardStats = async () => {
+    const fetchDashboardStats = useCallback(async () => {
         try {
             setLoading(true);
             const token = localStorage.getItem('token');
@@ -93,7 +88,12 @@ const SellerDashboard = () => {
         } finally {
             setLoading(false);
         }
-    };
+    }, []);
+
+    useEffect(() => {
+        fetchDashboardStats();
+        checkListings();
+    }, [fetchDashboardStats]);
 
     const checkListings = async () => {
         try {
@@ -151,7 +151,7 @@ const SellerDashboard = () => {
                 <div className="md:flex md:items-center md:justify-between">
                     <div className="flex-1 min-w-0">
                         <h2 className="text-2xl font-bold leading-7 text-gray-900 sm:text-3xl sm:truncate">
-                            Welcome back, {user?.name}
+                            Welcome back, {user?.username}
                         </h2>
                     </div>
                 </div>
