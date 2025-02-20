@@ -11,6 +11,7 @@ interface User {
   favoriteSport: string | null;
   favoriteTeam: string | null;
   favoritePlayers: string | null;
+  image_url: string | null;
 }
 
 interface AuthContextType {

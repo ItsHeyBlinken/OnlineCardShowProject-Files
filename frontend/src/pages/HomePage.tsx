@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-import { Link } from 'react-router-dom';
 
 // Add new interface for Seller
 interface Seller {
@@ -21,6 +20,8 @@ interface Listing {
     seller_name: string;
     seller_id: number;
 }
+
+const defaultImage = '/images/logo1.jpg';
 
 const HomePage: React.FC = () => {
     const [featuredSellers, setFeaturedSellers] = useState<Seller[]>([]);
@@ -73,7 +74,7 @@ const HomePage: React.FC = () => {
                             {featuredSellers.map((seller) => (
                                 <div key={seller.id} className="bg-white rounded-lg shadow p-4">
                                     <img 
-                                        src={seller.image_url || '/placeholder.png'} 
+                                        src={seller.image_url || defaultImage} 
                                         alt={seller.username}
                                         className="w-full h-48 object-cover rounded-md mb-4"
                                     />
@@ -108,7 +109,7 @@ const HomePage: React.FC = () => {
                             {topSellers.map((item) => (
                                 <div key={item.id} className="bg-white rounded-lg shadow p-4">
                                     <img 
-                                        src={item.image_url || '/placeholder.png'} 
+                                        src={item.image_url || defaultImage} 
                                         alt={item.title}
                                         className="w-full h-48 object-cover rounded-md mb-4"
                                     />
@@ -127,7 +128,7 @@ const HomePage: React.FC = () => {
                             {deals.map((item) => (
                                 <div key={item.id} className="bg-white rounded-lg shadow p-4">
                                     <img 
-                                        src={item.image_url || '/placeholder.png'} 
+                                        src={item.image_url || defaultImage} 
                                         alt={item.title}
                                         className="w-full h-48 object-cover rounded-md mb-4"
                                     />

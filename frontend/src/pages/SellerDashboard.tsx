@@ -3,6 +3,8 @@ import { Link, useHistory } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import axios from 'axios';
 
+const defaultImage = '/images/logo1.jpg';
+
 interface DashboardStats {
     totalSales: number;
     activeListings: number;
@@ -150,9 +152,23 @@ const SellerDashboard = () => {
                 {/* Header */}
                 <div className="md:flex md:items-center md:justify-between">
                     <div className="flex-1 min-w-0">
-                        <h2 className="text-2xl font-bold leading-7 text-gray-900 sm:text-3xl sm:truncate">
-                            Welcome back, {user?.username}
-                        </h2>
+                        <div className="flex items-center space-x-5">
+                            <div className="flex-shrink-0">
+                                <img
+                                    src={user?.image_url || defaultImage}
+                                    alt="Seller Profile"
+                                    className="h-20 w-20 rounded-full object-cover border-2 border-gray-200"
+                                />
+                            </div>
+                            <div>
+                                <h2 className="text-2xl font-bold leading-7 text-gray-900 sm:text-3xl sm:truncate">
+                                    Welcome back, {user?.username}
+                                </h2>
+                                <p className="mt-1 text-sm text-gray-500">
+                                    Manage your store and view your statistics
+                                </p>
+                            </div>
+                        </div>
                     </div>
                 </div>
 

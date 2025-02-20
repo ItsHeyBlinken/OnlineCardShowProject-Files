@@ -12,7 +12,7 @@ interface Listing {
     category: string;
 }
 
-const defaultImage = 'https://via.placeholder.com/400x300?text=Card+Image';
+const defaultImage = '/images/logo1.jpg';
 
 const SellerStorefrontPage = () => {
     const { user } = useAuth();
