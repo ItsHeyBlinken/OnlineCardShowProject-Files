@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import axios from 'axios';
 
+const defaultImage = '/images/logo1.jpg';
+
 export const ProfilePage = () => {
   const { user, loading, checkAuth, login } = useAuth();
   const [error, setError] = useState('');
@@ -169,6 +171,19 @@ export const ProfilePage = () => {
           <div className="bg-white shadow overflow-hidden sm:rounded-lg">
             <div className="px-4 py-5 sm:px-6">
               <h3 className="text-lg leading-6 font-medium text-gray-900">Profile Information</h3>
+              <div className="mt-4 flex items-center space-x-4">
+                <div className="flex-shrink-0">
+                  <img
+                    src={user?.image_url || defaultImage}
+                    alt="Profile"
+                    className="h-24 w-24 rounded-full object-cover border-2 border-gray-200"
+                  />
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Profile Picture</p>
+                  {/* Add photo upload button later */}
+                </div>
+              </div>
             </div>
             <div className="border-t border-gray-200">
               <dl>
