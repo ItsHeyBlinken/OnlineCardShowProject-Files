@@ -20,6 +20,14 @@ const Navbar = () => {
         }
     };
 
+    const handleSearch = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!searchQuery.trim()) return;
+        
+        // Navigate to the search results page
+        history.push(`/search?search=${encodeURIComponent(searchQuery)}`);
+    };
+
     return (
         <nav className="bg-white shadow-sm">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -37,13 +45,15 @@ const Navbar = () => {
                             </Link>
                         </div>
                         <div className="ml-auto max-w-xs w-full">
-                            <input
-                                type="text"
-                                placeholder="Search cards..."
-                                value={searchQuery}
-                                onChange={handleSearchChange}
-                                className="w-full px-4 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                            />
+                            <form onSubmit={handleSearch}>
+                                <input
+                                    type="text"
+                                    placeholder="Search cards..."
+                                    value={searchQuery}
+                                    onChange={handleSearchChange}
+                                    className="w-full px-4 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                />
+                            </form>
                         </div>
                     </div>
 
