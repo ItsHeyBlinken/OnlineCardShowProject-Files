@@ -16,13 +16,13 @@ const tiers: Feature[] = [
   },
   {
     name: "Starter",
-    price: "$50",
+    price: "$50*",
     description: "Best for casual sellers, small-scale sellers, and collectors",
     features: ["100 Listings", "Basic Store Front Customization", "Basic Analytics", "Standard Search"],
   },
   {
     name: "Pro",
-    price: "$100",
+    price: "$100*",
     description: "Ideal for growing sellers or hobbyists",
     features: [
       "250 Listings",
@@ -34,7 +34,7 @@ const tiers: Feature[] = [
   },
   {
     name: "Premium",
-    price: "$300",
+    price: "$300*",
     description: "For professional sellers or high volume sellers",
     features: [
       "Unlimited Listings",
@@ -124,7 +124,6 @@ const SubscriptionTiers: FC = () => {
         {/* New footer section */}
         <div className="mt-8 text-center text-sm text-gray-500">
           <p className="mb-1">*Pricing Subject to Change</p>
-          <p>*All Paid Plans have a Free Trial</p>
         </div>
       </div>
     </div>

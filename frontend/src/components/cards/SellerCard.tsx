@@ -13,14 +13,23 @@ interface SellerCardProps {
 }
 
 export const SellerCard: React.FC<SellerCardProps> = ({ id, name, rating, sales, image, listing_count, min_price }) => {
+  // Replace placeholder images with our default image
+  const imageUrl = image && image.includes('placeholder.com') 
+    ? '/images/logo1.jpg' 
+    : image || '/images/logo1.jpg';
+
   return (
-    <Link to={`/seller/${id}`} className="block">
+    <Link to={`/storefront/${id}`} className="block">
       <div className="rounded-lg border bg-white p-4 shadow-sm transition-shadow hover:shadow-md">
         <div className="relative mb-3 h-32 w-full">
           <img
-            src={image}
+            src={imageUrl}
             alt={name}
             className="h-full w-full rounded-md object-cover"
+            onError={(e) => {
+              const target = e.target as HTMLImageElement;
+              target.src = '/images/logo1.jpg';
+            }}
           />
         </div>
         <h3 className="font-semibold text-gray-900">{name}</h3>
