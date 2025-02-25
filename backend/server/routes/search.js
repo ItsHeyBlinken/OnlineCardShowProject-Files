@@ -1,13 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { Pool } = require('pg');
-
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: {
-    rejectUnauthorized: false
-  }
-});
+const pool = require('../db'); // Import the pool from db.js
 
 // Mock search handler
 router.get('/search', async (req, res) => {
@@ -94,6 +87,7 @@ router.get('/search', async (req, res) => {
             l.created_at DESC
           `;
           queryParams.push(`%${query}%`);
+          paramCount++;
         } else {
           queryString += 'l.created_at DESC';
         }

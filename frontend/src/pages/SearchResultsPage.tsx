@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useLocation, useHistory } from 'react-router-dom';
+import { useLocation, useHistory, Link } from 'react-router-dom';
 import axios from 'axios';
 
 interface SearchResult {
@@ -22,6 +22,7 @@ interface FilterState {
 }
 
 const ITEMS_PER_PAGE = 12;
+const defaultImage = '/images/logo1.jpg';
 
 const SearchResultsPage: React.FC = () => {
     const [results, setResults] = useState<SearchResult[]>([]);
@@ -180,9 +181,13 @@ const SearchResultsPage: React.FC = () => {
                             <Link to={`/listings/${result.id}`}>
                                 <div className="aspect-w-16 aspect-h-9">
                                     <img 
-                                        src={result.image_url || '/placeholder-card.png'} 
+                                        src={result.image_url || defaultImage} 
                                         alt={result.title}
                                         className="object-cover w-full h-48"
+                                        onError={(e) => {
+                                            const target = e.target as HTMLImageElement;
+                                            target.src = defaultImage;
+                                        }}
                                     />
                                 </div>
                             </Link>
@@ -193,7 +198,9 @@ const SearchResultsPage: React.FC = () => {
                                     </h2>
                                 </Link>
                                 <p className="mt-1 text-gray-600">{result.condition}</p>
-                                <p className="mt-1 text-lg font-bold text-gray-900">${result.price.toFixed(2)}</p>
+                                <p className="mt-1 text-lg font-bold text-gray-900">
+                                    ${result.price ? Number(result.price).toFixed(2) : '0.00'}
+                                </p>
                                 <div className="mt-2 flex items-center justify-between">
                                     <Link 
                                         to={`/seller/${result.seller_id}`}
