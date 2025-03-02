@@ -12,6 +12,7 @@ interface ListingForm {
     year: string;
     brand: string;
     playerName: string;
+    cardNumber: string;
 }
 
 const CreateListingPage = () => {
@@ -26,7 +27,8 @@ const CreateListingPage = () => {
         imageUrl: '',
         year: '',
         brand: '',
-        playerName: ''
+        playerName: '',
+        cardNumber: ''
     });
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -71,7 +73,7 @@ const CreateListingPage = () => {
                         </div>
                     )}
                     <form onSubmit={handleSubmit} className="space-y-6">
-                    <div>
+                        <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">
                                 Year
                             </label>
@@ -109,6 +111,20 @@ const CreateListingPage = () => {
                                 className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
                             />
                         </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Card Number
+                            </label>
+                            <input
+                                type="text"
+                                name="cardNumber"
+                                value={formData.cardNumber}
+                                onChange={handleChange}
+                                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                            />
+                        </div>
+
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">
                                 Title
@@ -205,8 +221,6 @@ const CreateListingPage = () => {
                                 className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
                             />
                         </div>
-
-                        
 
                         <div className="flex justify-end">
                             <button
