@@ -9,9 +9,24 @@ interface ProductCardProps {
   image: string
   discount?: number
   seller: string
+  year?: string
+  brand?: string
+  playerName?: string
+  cardNumber?: string
 }
 
-export const ProductCard = ({ id, title, price, image, discount, seller }: ProductCardProps) => {
+export const ProductCard = ({ 
+  id, 
+  title, 
+  price, 
+  image, 
+  discount, 
+  seller,
+  year,
+  brand,
+  playerName,
+  cardNumber
+}: ProductCardProps) => {
   const discountedPrice = discount ? price - (price * discount) / 100 : price
 
   return (
@@ -31,6 +46,15 @@ export const ProductCard = ({ id, title, price, image, discount, seller }: Produ
         </div>
         <div className="p-4">
           <h3 className="font-medium text-gray-900 line-clamp-2">{title}</h3>
+          
+          <div className="mt-1 text-sm text-gray-500">
+            {playerName && <div>{playerName}</div>}
+            {brand && year && <div>{brand} ({year})</div>}
+            {brand && !year && <div>{brand}</div>}
+            {!brand && year && <div>Year: {year}</div>}
+            {cardNumber && <div>Card #: {cardNumber}</div>}
+          </div>
+          
           <div className="mt-2 flex items-center justify-between">
             <div>
               {discount ? (

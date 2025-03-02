@@ -16,17 +16,28 @@ router.post('/', createListing);
 // Create a new listing
 router.post('/create', auth, async (req, res) => {
     try {
-        const { title, description, price, condition, category, imageUrl } = req.body;
-        const sellerId = req.user.id;
-
+        const { 
+            title, 
+            description, 
+            price, 
+            condition, 
+            category, 
+            imageUrl,
+            year,
+            brand,
+            playerName,
+            cardNumber 
+        } = req.body;
+        
         const result = await pool.query(
-            `INSERT INTO listings (
-                seller_id, title, description, price, condition, category, image_url
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
-            [sellerId, title, description, price, condition, category, imageUrl]
+            `INSERT INTO listings 
+             (title, description, price, condition, category, image_url, seller_id, year, brand, player_name, card_number) 
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) 
+             RETURNING *`,
+            [title, description, price, condition, category, imageUrl, req.user.id, year, brand, playerName, cardNumber]
         );
-
-        res.json(result.rows[0]);
+        
+        res.status(201).json(result.rows[0]);
     } catch (error) {
         console.error('Error creating listing:', error);
         res.status(500).json({ message: 'Server error' });
