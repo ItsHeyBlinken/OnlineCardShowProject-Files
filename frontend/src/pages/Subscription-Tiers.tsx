@@ -12,20 +12,20 @@ const tiers: Feature[] = [
     name: "Basic",
     price: "Free",
     description: "Perfect for seller who want to explore the platform",
-    features: ["25 Listings", "Basic Store Front", "Basic Analytics", "Standard Search"],
+    features: ["75 Listings", "Basic Store Front", "Basic Analytics", "Standard Search"],
   },
   {
     name: "Starter",
     price: "$50*",
     description: "Best for casual sellers, small-scale sellers, and collectors",
-    features: ["100 Listings", "Basic Store Front Customization", "Basic Analytics", "Standard Search"],
+    features: ["250 Listings", "Basic Store Front Customization", "Basic Analytics", "Standard Search"],
   },
   {
     name: "Pro",
     price: "$100*",
     description: "Ideal for growing sellers or hobbyists",
     features: [
-      "250 Listings",
+      "750 Listings",
       "Advanced Store Front Customization",
       "Advanced Analytics",
       "Priority Search Placement",

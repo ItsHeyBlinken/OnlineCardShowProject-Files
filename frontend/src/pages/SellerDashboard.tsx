@@ -29,11 +29,11 @@ const SellerDashboard = () => {
 
     const getMaxListings = (tier: string) => {
         switch (tier) {
-            case 'Basic': return 25;
-            case 'Starter': return 100;
-            case 'Pro': return 250;
+            case 'Basic': return 75;
+            case 'Starter': return 250;
+            case 'Pro': return 750;
             case 'Premium': return 999999; // Effectively unlimited
-            default: return 25;
+            default: return 75;
         }
     };
 

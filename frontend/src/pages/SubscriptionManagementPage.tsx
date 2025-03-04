@@ -30,22 +30,25 @@ const SubscriptionManagementPage: FC = () => {
             <div className="bg-gray-50 p-4 rounded-lg">
               <h2 className="text-lg font-semibold text-gray-900">Available Plans</h2>
               <div className="mt-4 space-y-4">
-                {['Basic', 'Starter', 'Pro', 'Premium'].map((tier) => (
-                  <div key={tier} className="flex items-center justify-between p-4 bg-white rounded-md shadow-sm">
+                {[
+                  { name: 'Basic', price: 'Free', listings: '75 Listings' },
+                  { name: 'Starter', price: '$50/month', listings: '250 Listings' },
+                  { name: 'Pro', price: '$100/month', listings: '750 Listings' },
+                  { name: 'Premium', price: '$300/month', listings: 'Unlimited Listings' }
+                ].map((tier) => (
+                  <div key={tier.name} className="flex items-center justify-between p-4 bg-white rounded-md shadow-sm">
                     <div>
-                      <h3 className="font-medium text-gray-900">{tier}</h3>
+                      <h3 className="font-medium text-gray-900">{tier.name}</h3>
                       <p className="text-sm text-gray-500">
-                        {tier === 'Basic' ? 'Free' : 
-                         tier === 'Starter' ? '$50/month' :
-                         tier === 'Pro' ? '$100/month' : '$300/month'}
+                        {tier.price} • {tier.listings}
                       </p>
                     </div>
-                    {tier !== user?.subscriptionTier && tier !== 'Basic' && (
+                    {tier.name !== user?.subscriptionTier && tier.name !== 'Basic' && (
                       <button
                         onClick={handleUpgrade}
                         className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
                       >
-                        {getButtonText(tier, user?.subscriptionTier || 'Basic')}
+                        {getButtonText(tier.name, (user as any)?.subscriptionTier || 'Basic')}
                       </button>
                     )}
                   </div>

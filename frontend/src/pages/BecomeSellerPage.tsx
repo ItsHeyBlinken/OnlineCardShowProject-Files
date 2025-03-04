@@ -108,10 +108,10 @@ const BecomeSellerPage = () => {
                 onChange={handleChange}
                 className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
               >
-                <option value="Basic">Basic - Free</option>
-                <option value="Starter">Starter - $50/month</option>
-                <option value="Pro">Pro - $100/month</option>
-                <option value="Premium">Premium - $300/month</option>
+                <option value="Basic">Basic - Free (75 Listings)</option>
+                <option value="Starter">Starter - $50/month (250 Listings)</option>
+                <option value="Pro">Pro - $100/month (750 Listings)</option>
+                <option value="Premium">Premium - $300/month (Unlimited Listings)</option>
               </select>
               <p className="mt-2 text-sm text-gray-500">
                 You can upgrade your subscription at any time from your seller dashboard
