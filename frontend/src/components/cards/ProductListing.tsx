@@ -1,5 +1,6 @@
 import React, { useState, ChangeEvent, FormEvent } from 'react';
 import axios from 'axios';
+import ImageDropzone from '../common/ImageDropzone';
 
 const ProductListing: React.FC = () => {
     const [title, setTitle] = useState<string>('');
@@ -10,38 +11,60 @@ const ProductListing: React.FC = () => {
     const [cardNumber, setCardNumber] = useState<string>('');
     const [condition, setCondition] = useState<string>('');
     const [category, setCategory] = useState<string>('');
-    const [frontImage, setFrontImage] = useState<File | null>(null);
     const [price, setPrice] = useState<string>('');
+    const [imageUrls, setImageUrls] = useState<string[]>([]);
+    const [tempListingId, setTempListingId] = useState<string>('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [submitError, setSubmitError] = useState<string | null>(null);
+    const [submitSuccess, setSubmitSuccess] = useState(false);
+
+    const handleImagesUploaded = (urls: string[], listingId: string) => {
+        setImageUrls(urls);
+        setTempListingId(listingId);
+    };
 
     const handleSubmit = async (e: FormEvent) => {
         e.preventDefault();
-
-        const formData = new FormData();
-        if (frontImage) formData.append('image', frontImage);
+        
+        if (imageUrls.length === 0) {
+            setSubmitError('Please upload at least one image for your listing');
+            return;
+        }
+        
+        setIsSubmitting(true);
+        setSubmitError(null);
+        setSubmitSuccess(false);
 
         try {
-            const imageUploadResponse = await axios.post('/api/upload-image', formData, {
-                headers: {
-                    'Content-Type': 'multipart/form-data',
-                },
-            });
-
-            const { imagePath } = imageUploadResponse.data;
-
             const listingData = {
                 title,
                 description,
                 price: parseFloat(price),
                 condition,
                 category,
-                imageUrl: imagePath,
+                imageUrls,
+                tempListingId,
                 year,
                 brand,
                 playerName,
                 cardNumber
             };
 
-            await axios.post('/api/listings/create', listingData, {
+            // Create the listing
+            const listingResponse = await axios.post('/api/listings/create', listingData, {
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                }
+            });
+            
+            const newListingId = listingResponse.data.id;
+            
+            // Associate the uploaded images with the new listing
+            await axios.post('/api/images/associate', {
+                tempListingId,
+                listingId: newListingId,
+                imageUrls
+            }, {
                 headers: {
                     'Authorization': `Bearer ${localStorage.getItem('token')}`
                 }
@@ -56,10 +79,15 @@ const ProductListing: React.FC = () => {
             setCardNumber('');
             setCondition('');
             setCategory('');
-            setFrontImage(null);
             setPrice('');
+            setImageUrls([]);
+            setTempListingId('');
+            setSubmitSuccess(true);
         } catch (error) {
             console.error('Error adding listing:', error);
+            setSubmitError('Failed to create listing. Please try again.');
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -67,6 +95,19 @@ const ProductListing: React.FC = () => {
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="bg-white shadow rounded-lg p-8">
                 <h1 className="text-2xl font-bold text-gray-900 mb-6">Add New Listing</h1>
+                
+                {submitSuccess && (
+                    <div className="mb-6 p-4 bg-green-100 text-green-700 rounded-md">
+                        Listing created successfully!
+                    </div>
+                )}
+                
+                {submitError && (
+                    <div className="mb-6 p-4 bg-red-100 text-red-700 rounded-md">
+                        {submitError}
+                    </div>
+                )}
+                
                 <form onSubmit={handleSubmit} className="space-y-6">
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">Title</label>
@@ -165,12 +206,13 @@ const ProductListing: React.FC = () => {
                     </div>
                     
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Image</label>
-                        <input 
-                            type="file" 
-                            onChange={(e) => setFrontImage(e.target.files ? e.target.files[0] : null)} 
-                            className="w-full px-4 py-2 border border-gray-300 rounded-md"
-                        />
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Images</label>
+                        <ImageDropzone onImagesUploaded={handleImagesUploaded} />
+                        {imageUrls.length > 0 && (
+                            <div className="mt-2 text-sm text-green-600">
+                                {imageUrls.length} image(s) uploaded successfully
+                            </div>
+                        )}
                     </div>
                     
                     <div>
@@ -188,9 +230,14 @@ const ProductListing: React.FC = () => {
                     <div className="flex justify-end">
                         <button 
                             type="submit"
-                            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                            disabled={isSubmitting || imageUrls.length === 0}
+                            className={`px-4 py-2 text-white rounded-md ${
+                                isSubmitting || imageUrls.length === 0
+                                    ? 'bg-blue-400 cursor-not-allowed'
+                                    : 'bg-blue-600 hover:bg-blue-700'
+                            }`}
                         >
-                            Add Listing
+                            {isSubmitting ? 'Creating Listing...' : 'Add Listing'}
                         </button>
                     </div>
                 </form>

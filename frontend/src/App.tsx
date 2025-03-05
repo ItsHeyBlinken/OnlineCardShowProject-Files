@@ -20,6 +20,7 @@ import SubscriptionTiers from './pages/Subscription-Tiers';
 import SubscriptionManagementPage from './pages/SubscriptionManagementPage';
 import InboxPage from './pages/InboxPage';
 import SearchResultsPage from './pages/SearchResultsPage';
+import ListingDetailPage from './pages/ListingDetailPage';
 
 const App = () => {
   return (
@@ -107,7 +108,7 @@ const App = () => {
               <Route path="/subscription-tiers" component={SubscriptionTiers} />
               <Route
                 path="/seller/subscription"
-                component={() => (
+                render={() => (
                   <ProtectedRoute path="/seller/subscription">
                     <SubscriptionManagementPage />
                   </ProtectedRoute>
@@ -115,6 +116,8 @@ const App = () => {
               />
               <Route path="/inbox" component={InboxPage} />
               <Route path="/search" component={SearchResultsPage} />
+              <Route path="/listing/:id" component={ListingDetailPage} />
+              <Route path="/storefront/:id" component={SellerStorefrontPage} />
               <Route path="*" component={() => <h1>404 Not Found</h1>} />
             </Switch>
           </main>

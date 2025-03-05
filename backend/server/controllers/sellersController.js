@@ -82,8 +82,34 @@ const getDeals = async (req, res) => {
     }
 };
 
+const getRecentListings = async (req, res) => {
+    try {
+        const result = await pool.query(
+            `SELECT 
+                l.id,
+                l.title,
+                l.price,
+                l.image_url,
+                l.image_urls,
+                u.username as seller_name,
+                u.id as seller_id
+            FROM listings l
+            JOIN users u ON l.seller_id = u.id
+            WHERE l.active = true
+            ORDER BY l.created_at DESC
+            LIMIT 4`
+        );
+
+        res.json(result.rows);
+    } catch (error) {
+        console.error('Error fetching recent listings:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+
 module.exports = {
     getFeaturedSellers,
     getTopSellers,
-    getDeals
+    getDeals,
+    getRecentListings
 };

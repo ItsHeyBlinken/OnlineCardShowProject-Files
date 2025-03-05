@@ -10,6 +10,21 @@ const express = require('express');
 const cors = require('cors');
 const app = express();
 const auth = require('./middleware/auth');
+const pool = require('./db');
+const fs = require('fs');
+const path = require('path');
+
+// Run database migrations
+const runDatabaseMigrations = async () => {
+  try {
+    console.log('Running database schema migrations...');
+    const schemaUpdateSQL = fs.readFileSync(path.join(__dirname, 'sql', 'update_listings_schema.sql'), 'utf8');
+    await pool.query(schemaUpdateSQL);
+    console.log('Database schema migrations completed successfully');
+  } catch (error) {
+    console.error('Error running database migrations:', error);
+  }
+};
 
 // Import routes
 const signupRoutes = require('./routes/signup');
@@ -22,6 +37,7 @@ const sellerRoutes = require('./routes/seller');
 const storesRoutes = require('./routes/stores');
 const sellersRouter = require('./routes/sellers'); // Adjust the path as necessary
 const messagesRouter = require('./routes/messages');
+const imageRoutes = require('./routes/images'); // Add the new image routes
 
 // Middleware
 app.use(cors());
@@ -44,6 +60,7 @@ app.use('/api/seller', auth, sellerRoutes);
 app.use('/api/stores', storesRoutes);
 app.use('/api/sellers', sellersRouter); // This will prefix all routes in sellersRouter with /api/sellers
 app.use('/api/messages', messagesRouter);
+app.use('/api/images', imageRoutes); // Add the image routes
 
 // Basic test route
 app.get('/', (req, res) => {
@@ -58,8 +75,11 @@ app.use((err, req, res, next) => {
 
 // Start server
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
   console.log(`Backend server running on port ${PORT}`);
+  
+  // Run database migrations when the server starts
+  await runDatabaseMigrations();
 }).on('error', (err) => {
   console.error('Failed to start server:', err);
 });

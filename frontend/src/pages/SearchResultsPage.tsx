@@ -178,7 +178,7 @@ const SearchResultsPage: React.FC = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {results.map((result) => (
                         <div key={result.id} className="border rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow">
-                            <Link to={`/listings/${result.id}`}>
+                            <Link to={`/listing/${result.id}`}>
                                 <div className="aspect-w-16 aspect-h-9">
                                     <img 
                                         src={result.image_url || defaultImage} 
@@ -192,7 +192,7 @@ const SearchResultsPage: React.FC = () => {
                                 </div>
                             </Link>
                             <div className="p-4">
-                                <Link to={`/listings/${result.id}`}>
+                                <Link to={`/listing/${result.id}`}>
                                     <h2 className="text-lg font-semibold text-gray-900 hover:text-blue-600">
                                         {result.title}
                                     </h2>

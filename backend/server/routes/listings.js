@@ -22,19 +22,26 @@ router.post('/create', auth, async (req, res) => {
             price, 
             condition, 
             category, 
-            imageUrl,
+            imageUrls,
             year,
             brand,
             playerName,
-            cardNumber 
+            cardNumber,
+            tempListingId 
         } = req.body;
+        
+        // Convert imageUrls array to JSONB
+        const imageUrlsJson = JSON.stringify(imageUrls || []);
+        
+        // Use the first image as the main image_url or set to null if no images
+        const primaryImageUrl = imageUrls && imageUrls.length > 0 ? imageUrls[0] : null;
         
         const result = await pool.query(
             `INSERT INTO listings 
-             (title, description, price, condition, category, image_url, seller_id, year, brand, player_name, card_number) 
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) 
+             (title, description, price, condition, category, image_url, image_urls, seller_id, year, brand, player_name, card_number, created_at) 
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, CURRENT_TIMESTAMP) 
              RETURNING *`,
-            [title, description, price, condition, category, imageUrl, req.user.id, year, brand, playerName, cardNumber]
+            [title, description, price, condition, category, primaryImageUrl, imageUrlsJson, req.user.id, year, brand, playerName, cardNumber]
         );
         
         res.status(201).json(result.rows[0]);

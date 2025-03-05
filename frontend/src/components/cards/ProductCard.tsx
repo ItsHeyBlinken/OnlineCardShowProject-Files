@@ -30,7 +30,7 @@ export const ProductCard = ({
   const discountedPrice = discount ? price - (price * discount) / 100 : price
 
   return (
-    <Link to={`/product/${id}`} className="block">
+    <Link to={`/listing/${id}`} className="block">
       <div className="rounded-lg border bg-white shadow-sm transition-shadow hover:shadow-md">
         <div className="relative">
           <img
