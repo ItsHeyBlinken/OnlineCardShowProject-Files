@@ -1,6 +1,7 @@
 import React from 'react';
-import MessagesList from '../components/Messages/MessagesList';
-import MessageInput from '../components/Messages/MessageInput';
+// Assuming the correct paths for MessagesList and MessageInput are as follows:
+import MessagesList from '../../components/Messages/MessagesList';
+import MessageInput from '../../components/Messages/MessageInput';
 
 const ItemDetailPage: React.FC<{ listingId: string; sellerId: string; userId: string }> = ({ listingId, sellerId, userId }) => {
   return (

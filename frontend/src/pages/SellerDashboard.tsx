@@ -26,6 +26,7 @@ const SellerDashboard = () => {
     const [error, setError] = useState('');
     const history = useHistory();
     const [hasListings, setHasListings] = useState(false);
+    const [unreadMessages, setUnreadMessages] = useState(0);
 
     const getMaxListings = (tier: string) => {
         switch (tier) {
@@ -93,9 +94,17 @@ const SellerDashboard = () => {
     }, []);
 
     useEffect(() => {
-        fetchDashboardStats();
-        checkListings();
-    }, [fetchDashboardStats]);
+        if (user) {
+            fetchDashboardStats();
+            checkListings();
+            fetchUnreadMessageCount();
+            
+            // Set up polling for message count updates
+            const intervalId = setInterval(fetchUnreadMessageCount, 60000); // Check every minute
+            
+            return () => clearInterval(intervalId);
+        }
+    }, [user, fetchDashboardStats]);
 
     const checkListings = async () => {
         try {
@@ -106,6 +115,15 @@ const SellerDashboard = () => {
             setHasListings(response.data.length > 0);
         } catch (error) {
             console.error('Error checking listings:', error);
+        }
+    };
+
+    const fetchUnreadMessageCount = async () => {
+        try {
+            const response = await axios.get('/api/messages/unread/count');
+            setUnreadMessages(response.data.count);
+        } catch (error) {
+            console.error('Error fetching unread message count:', error);
         }
     };
 
@@ -359,10 +377,19 @@ const SellerDashboard = () => {
                         </Link>
 
                         <Link to="/inbox" className="block">
-                            <div className="border border-gray-200 rounded-lg p-6 hover:border-indigo-500 transition-colors">
-                                <h3 className="text-lg font-medium text-gray-900">Messages</h3>
+                            <div className="border border-gray-200 rounded-lg p-6 hover:border-indigo-500 transition-colors relative">
+                                <h3 className="text-lg font-medium text-gray-900">
+                                    Messages
+                                    {unreadMessages > 0 && (
+                                        <span className="ml-2 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-red-600 rounded-full">
+                                            {unreadMessages > 9 ? '9+' : unreadMessages}
+                                        </span>
+                                    )}
+                                </h3>
                                 <p className="mt-2 text-sm text-gray-500">
-                                    View and respond to buyer messages
+                                    {unreadMessages > 0 
+                                        ? `You have ${unreadMessages} unread message${unreadMessages > 1 ? 's' : ''}`
+                                        : 'View and respond to buyer messages'}
                                 </p>
                             </div>
                         </Link>

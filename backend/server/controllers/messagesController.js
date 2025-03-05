@@ -153,10 +153,48 @@ const getConversationMessages = async (req, res) => {
     }
 };
 
+const deleteConversation = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const partnerId = parseInt(req.query.partnerId);
+        const listingId = req.query.listingId ? parseInt(req.query.listingId) : null;
+        
+        if (!partnerId) {
+            return res.status(400).json({ message: 'Partner ID is required' });
+        }
+        
+        let queryParams = [userId, partnerId];
+        let listingCondition = '';
+        
+        // If listingId is provided, add it to the query condition
+        if (listingId) {
+            listingCondition = 'AND listing_id = $3';
+            queryParams.push(listingId);
+        }
+        
+        // Delete all messages between these two users for the specified listing (if provided)
+        const result = await pool.query(`
+            DELETE FROM messages
+            WHERE ((sender_id = $1 AND receiver_id = $2) OR (sender_id = $2 AND receiver_id = $1))
+            ${listingCondition}
+            RETURNING id
+        `, queryParams);
+        
+        res.json({ 
+            message: 'Conversation deleted successfully', 
+            count: result.rowCount 
+        });
+    } catch (error) {
+        console.error('Error deleting conversation:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+
 module.exports = {
     getMessages,
     sendMessage,
     markAsRead,
     getConversations,
-    getConversationMessages
+    getConversationMessages,
+    deleteConversation
 }; 

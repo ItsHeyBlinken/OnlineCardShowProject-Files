@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import axios from 'axios';
 import ImageGallery from '../components/common/ImageGallery';
+import { useAuth } from '../hooks/useAuth';
 
 interface Listing {
   id: number;
@@ -21,14 +22,13 @@ interface Listing {
   card_number?: string;
 }
 
-const defaultImage = '/images/logo1.jpg';
-
 const ListingDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const [listing, setListing] = useState<Listing | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
+  const { user } = useAuth();
+  
   useEffect(() => {
     const fetchListing = async () => {
       try {
@@ -53,7 +53,24 @@ const ListingDetailPage: React.FC = () => {
     if (listing.image_urls && Array.isArray(listing.image_urls) && listing.image_urls.length > 0) {
       return listing.image_urls;
     }
-    return listing.image_url ? [listing.image_url] : [defaultImage];
+    return listing.image_url ? [listing.image_url] : [];
+  };
+
+  const handleMessageSeller = () => {
+    if (!user) {
+      // If user is not logged in, prompt them
+      alert('Please log in to message the seller');
+      return;
+    }
+
+    if (user.id === listing?.seller_id) {
+      // Prevent messaging yourself
+      alert("You can't message yourself as the seller");
+      return;
+    }
+
+    // Navigate to inbox with query params to create a new message
+    window.location.href = `/inbox?new=true&receiverId=${listing?.seller_id}&listingId=${id}&receiverName=${encodeURIComponent(listing?.seller_name || '')}&listingTitle=${encodeURIComponent(listing?.title || '')}`;
   };
 
   if (loading) return <div className="text-center py-8">Loading...</div>;
@@ -143,7 +160,10 @@ const ListingDetailPage: React.FC = () => {
               <button className="px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition">
                 Add to Cart
               </button>
-              <button className="px-6 py-3 border border-gray-300 rounded-md hover:bg-gray-50 transition">
+              <button 
+                className="px-6 py-3 border border-gray-300 rounded-md hover:bg-gray-50 transition"
+                onClick={handleMessageSeller}
+              >
                 Message Seller
               </button>
             </div>

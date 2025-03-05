@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { useAuth } from '../hooks/useAuth';
 import axios from 'axios';
+import { useAuth } from '../contexts/AuthContext';
 
 const defaultImage = '/images/logo1.jpg';
 
@@ -19,6 +19,7 @@ export const ProfilePage = () => {
     favoriteTeam: user?.favoriteTeam || '',
     favoritePlayers: user?.favoritePlayers || '',
   });
+  const [unreadMessages, setUnreadMessages] = useState(0);
   console.log('User data with created_at:', user);
 
   // Format date helper function
@@ -58,6 +59,26 @@ export const ProfilePage = () => {
   useEffect(() => {
     console.log('Current user data:', user);
   }, [user]);
+
+  useEffect(() => {
+    if (user) {
+      fetchUnreadMessageCount();
+      
+      // Set up polling for message count updates
+      const intervalId = setInterval(fetchUnreadMessageCount, 60000); // Check every minute
+      
+      return () => clearInterval(intervalId);
+    }
+  }, [user]);
+
+  const fetchUnreadMessageCount = async () => {
+    try {
+      const response = await axios.get('/api/messages/unread/count');
+      setUnreadMessages(response.data.count);
+    } catch (error) {
+      console.error('Error fetching unread message count:', error);
+    }
+  };
 
   const handleSellerFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -362,9 +383,18 @@ export const ProfilePage = () => {
                 to="/inbox"
                 className="block p-4 border border-gray-200 rounded-lg hover:border-indigo-500 transition-colors"
               >
-                <h3 className="text-lg font-medium text-gray-900">Messages</h3>
+                <h3 className="text-lg font-medium text-gray-900">
+                  Messages
+                  {unreadMessages > 0 && (
+                    <span className="ml-2 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-red-600 rounded-full">
+                      {unreadMessages > 9 ? '9+' : unreadMessages}
+                    </span>
+                  )}
+                </h3>
                 <p className="mt-2 text-sm text-gray-500">
-                  View your conversations with buyers and sellers
+                  {unreadMessages > 0 
+                    ? `You have ${unreadMessages} unread message${unreadMessages > 1 ? 's' : ''}`
+                    : 'View your conversations with buyers and sellers'}
                 </p>
               </Link>
             </div>

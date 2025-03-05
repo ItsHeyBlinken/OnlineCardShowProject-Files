@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 
 interface Message {
     id: number;
@@ -35,13 +35,16 @@ const InboxPage: React.FC = () => {
         conversations: boolean;
         messages: boolean;
         sending: boolean;
+        deleting: boolean;
     }>({
         conversations: false,
         messages: false,
         sending: false,
+        deleting: false,
     });
     const [error, setError] = useState('');
     const messagesEndRef = useRef<HTMLDivElement>(null);
+    const location = useLocation();
 
     useEffect(() => {
         fetchConversations();
@@ -56,6 +59,34 @@ const InboxPage: React.FC = () => {
     useEffect(() => {
         scrollToBottom();
     }, [messages]);
+
+    // Handle new message request from URL query params
+    useEffect(() => {
+        if (user && location.search) {
+            const params = new URLSearchParams(location.search);
+            if (params.get('new') === 'true') {
+                const receiverId = Number(params.get('receiverId'));
+                const listingId = Number(params.get('listingId'));
+                const receiverName = params.get('receiverName') || 'Seller';
+                const listingTitle = params.get('listingTitle') || '';
+                
+                if (receiverId && !isNaN(receiverId)) {
+                    // Create a temporary conversation for the new message
+                    const tempConversation: Conversation = {
+                        userId: receiverId,
+                        username: receiverName,
+                        listingId: listingId || null,
+                        listingTitle: listingTitle || null,
+                        lastMessage: {} as Message, // Empty placeholder
+                        unreadCount: 0
+                    };
+                    
+                    setSelectedConversation(tempConversation);
+                    setMessages([]);
+                }
+            }
+        }
+    }, [location.search, user]);
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -214,6 +245,45 @@ const InboxPage: React.FC = () => {
         setSelectedConversation(conversation);
     };
 
+    // Handle conversation deletion
+    const handleDeleteConversation = async () => {
+        if (!selectedConversation || !user) return;
+        
+        if (!window.confirm('Are you sure you want to delete this conversation? This action cannot be undone.')) {
+            return;
+        }
+        
+        try {
+            setLoading(prev => ({ ...prev, deleting: true }));
+            setError('');
+            
+            // Delete all messages between these users for this listing
+            await axios.delete('/api/messages/conversation', {
+                params: {
+                    partnerId: selectedConversation.userId,
+                    listingId: selectedConversation.listingId || undefined
+                }
+            });
+            
+            // Update the UI by removing the deleted conversation and resetting selection
+            setConversations(prev => 
+                prev.filter(conv => 
+                    !(conv.userId === selectedConversation.userId && 
+                      conv.listingId === selectedConversation.listingId)
+                )
+            );
+            
+            setSelectedConversation(null);
+            setMessages([]);
+            
+        } catch (error) {
+            console.error('Error deleting conversation:', error);
+            setError('Failed to delete conversation');
+        } finally {
+            setLoading(prev => ({ ...prev, deleting: false }));
+        }
+    };
+
     return (
         <div className="container mx-auto px-4 py-8 max-w-6xl">
             <h1 className="text-3xl font-bold mb-6">Messages</h1>
@@ -298,14 +368,31 @@ const InboxPage: React.FC = () => {
                                             </p>
                                         )}
                                     </div>
-                                    {selectedConversation.listingId && (
-                                        <Link 
-                                            to={`/listings/${selectedConversation.listingId}`}
-                                            className="text-blue-500 hover:underline text-sm"
+                                    <div className="flex items-center space-x-3">
+                                        {selectedConversation.listingId && (
+                                            <Link 
+                                                to={`/listings/${selectedConversation.listingId}`}
+                                                className="text-blue-500 hover:underline text-sm"
+                                            >
+                                                View Listing
+                                            </Link>
+                                        )}
+                                        <button
+                                            onClick={handleDeleteConversation}
+                                            disabled={loading.deleting}
+                                            className="text-red-500 hover:text-red-700 text-sm flex items-center"
+                                            title="Delete conversation"
                                         >
-                                            View Listing
-                                        </Link>
-                                    )}
+                                            {loading.deleting ? 'Deleting...' : (
+                                                <>
+                                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                    </svg>
+                                                    Delete
+                                                </>
+                                            )}
+                                        </button>
+                                    </div>
                                 </div>
 
                                 {/* Messages */}
