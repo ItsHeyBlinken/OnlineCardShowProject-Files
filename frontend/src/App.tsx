@@ -3,7 +3,7 @@ import { BrowserRouter as Router, Switch, Route } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import Navbar from './components/layout/Navbar';
 import Footer from './components/layout/Footer';
-import ProtectedRoute from './components/ProtectedRoute';
+import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import HomePage from './pages/HomePage';
 import { ProfilePage } from './pages/ProfilePage';
 import SellerStorefrontPage from './pages/SellerStorefrontPage';
@@ -16,6 +16,7 @@ import LoginPage from './pages/LoginPage';
 import { OrderHistoryPage } from './pages/OrderHistoryPage';
 import SellerDashboard from './pages/SellerDashboard';
 import CreateListingPage from './pages/CreateListingPage';
+import ManageListingsPage from './pages/ManageListingsPage';
 import SubscriptionTiers from './pages/Subscription-Tiers';
 import SubscriptionManagementPage from './pages/SubscriptionManagementPage';
 import InboxPage from './pages/InboxPage';
@@ -36,7 +37,7 @@ const App = () => {
               <Route
                 path="/profile"
                 render={() => (
-                  <ProtectedRoute path="/profile">
+                  <ProtectedRoute>
                     <ProfilePage />
                   </ProtectedRoute>
                 )}
@@ -44,7 +45,7 @@ const App = () => {
               <Route
                 path="/order-history"
                 render={() => (
-                  <ProtectedRoute path="/order-history">
+                  <ProtectedRoute>
                     <OrderHistoryPage />
                   </ProtectedRoute>
                 )}
@@ -52,7 +53,7 @@ const App = () => {
               <Route
                 path="/seller/storefront"
                 render={() => (
-                  <ProtectedRoute path="/seller/storefront">
+                  <ProtectedRoute>
                     <SellerStorefrontPage />
                   </ProtectedRoute>
                 )}
@@ -60,7 +61,7 @@ const App = () => {
               <Route
                 path="/seller/customize"
                 render={() => (
-                  <ProtectedRoute path="/seller/customize">
+                  <ProtectedRoute>
                     <SellerCustomizationPage />
                   </ProtectedRoute>
                 )}
@@ -68,7 +69,7 @@ const App = () => {
               <Route
                 path="/listings"
                 render={() => (
-                  <ProtectedRoute path="/listings">
+                  <ProtectedRoute>
                     <ListingsPage />
                   </ProtectedRoute>
                 )}
@@ -76,7 +77,7 @@ const App = () => {
               <Route
                 path="/cart"
                 render={() => (
-                  <ProtectedRoute path="/cart">
+                  <ProtectedRoute>
                     <CartPage />
                   </ProtectedRoute>
                 )}
@@ -84,7 +85,7 @@ const App = () => {
               <Route
                 path="/become-seller"
                 render={() => (
-                  <ProtectedRoute path="/become-seller">
+                  <ProtectedRoute>
                     <BecomeSellerPage />
                   </ProtectedRoute>
                 )}
@@ -92,7 +93,7 @@ const App = () => {
               <Route
                 path="/seller/dashboard"
                 render={() => (
-                  <ProtectedRoute path="/seller/dashboard">
+                  <ProtectedRoute>
                     <SellerDashboard />
                   </ProtectedRoute>
                 )}
@@ -100,10 +101,14 @@ const App = () => {
               <Route
                 path="/seller/create-listing"
                 render={() => (
-                  <ProtectedRoute path="/seller/create-listing">
+                  <ProtectedRoute>
                     <CreateListingPage />
                   </ProtectedRoute>
                 )}
+              />
+              <Route
+                path="/manage-listings"
+                component={ManageListingsPage}
               />
               <Route path="/subscription-tiers" component={SubscriptionTiers} />
               <Route

@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/auth');
+const pool = require('../db');
 const { 
     getDashboardStats, 
     getSellerListings, 
@@ -47,17 +48,102 @@ router.post('/listings', auth, async (req, res) => {
 // Update listing
 router.put('/listings/:id', auth, async (req, res) => {
     try {
-        const { title, description, price, category, image_url } = req.body;
+        const { 
+            title, 
+            description, 
+            price, 
+            category, 
+            image_url, 
+            image_urls,
+            condition,
+            year,
+            brand,
+            playerName,
+            cardNumber
+        } = req.body;
+        
         const listingId = req.params.id;
         const sellerId = req.user.id;
 
-        const result = await pool.query(
-            `UPDATE listings 
-             SET title = $1, description = $2, price = $3, category = $4, image_url = $5
-             WHERE id = $6 AND seller_id = $7
-             RETURNING *`,
-            [title, description, price, category, image_url, listingId, sellerId]
-        );
+        // Convert image_urls array to JSONB if provided
+        const imageUrlsJson = image_urls ? JSON.stringify(image_urls) : null;
+
+        // Build the query dynamically based on provided fields
+        let updateFields = [];
+        let queryParams = [];
+        let paramIndex = 1;
+
+        if (title !== undefined) {
+            updateFields.push(`title = $${paramIndex++}`);
+            queryParams.push(title);
+        }
+
+        if (description !== undefined) {
+            updateFields.push(`description = $${paramIndex++}`);
+            queryParams.push(description);
+        }
+
+        if (price !== undefined) {
+            updateFields.push(`price = $${paramIndex++}`);
+            queryParams.push(price);
+        }
+
+        if (category !== undefined) {
+            updateFields.push(`category = $${paramIndex++}`);
+            queryParams.push(category);
+        }
+
+        if (condition !== undefined) {
+            updateFields.push(`condition = $${paramIndex++}`);
+            queryParams.push(condition);
+        }
+
+        if (image_url !== undefined) {
+            updateFields.push(`image_url = $${paramIndex++}`);
+            queryParams.push(image_url);
+        }
+
+        if (imageUrlsJson !== null) {
+            updateFields.push(`image_urls = $${paramIndex++}`);
+            queryParams.push(imageUrlsJson);
+        }
+        
+        if (year !== undefined) {
+            updateFields.push(`year = $${paramIndex++}`);
+            queryParams.push(year);
+        }
+        
+        if (brand !== undefined) {
+            updateFields.push(`brand = $${paramIndex++}`);
+            queryParams.push(brand);
+        }
+        
+        if (playerName !== undefined) {
+            updateFields.push(`player_name = $${paramIndex++}`);
+            queryParams.push(playerName);
+        }
+        
+        if (cardNumber !== undefined) {
+            updateFields.push(`card_number = $${paramIndex++}`);
+            queryParams.push(cardNumber);
+        }
+
+        // Add the listing ID and seller ID to the params
+        queryParams.push(listingId);
+        queryParams.push(sellerId);
+
+        if (updateFields.length === 0) {
+            return res.status(400).json({ message: 'No fields to update' });
+        }
+
+        const updateQuery = `
+            UPDATE listings 
+            SET ${updateFields.join(', ')}
+            WHERE id = $${paramIndex++} AND seller_id = $${paramIndex++}
+            RETURNING *
+        `;
+
+        const result = await pool.query(updateQuery, queryParams);
 
         if (result.rows.length === 0) {
             return res.status(404).json({ message: 'Listing not found or unauthorized' });
