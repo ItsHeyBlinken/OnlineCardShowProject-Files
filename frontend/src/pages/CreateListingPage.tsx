@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useHistory } from 'react-router-dom';
 import axios from 'axios';
 import ImageDropzone from '../components/common/ImageDropzone';
+import BackToDashboardButton from '../components/common/BackToDashboardButton';
 
 interface ListingForm {
     title: string;
@@ -100,6 +101,9 @@ const CreateListingPage = () => {
     return (
         <div className="min-h-screen bg-gray-50 py-12">
             <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div className="mb-4">
+                    <BackToDashboardButton />
+                </div>
                 <div className="bg-white shadow rounded-lg p-8">
                     <h1 className="text-2xl font-bold text-gray-900 mb-6">
                         Create New Listing
@@ -258,8 +262,8 @@ const CreateListingPage = () => {
                                             <div key={index} className="relative w-24 h-24">
                                                 <img 
                                                     src={url} 
-                                                    alt={`Uploaded image ${index + 1}`} 
-                                                    className="w-full h-full object-cover rounded-md"
+                                                    alt={`Uploaded ${index + 1}`} 
+                                                    className="h-full w-full object-cover rounded-md"
                                                 />
                                             </div>
                                         ))}

@@ -76,7 +76,77 @@ const updateUserPreferences = async (req, res) => {
     }
 };
 
+const updateUser = async (req, res) => {
+  try {
+    const userId = req.params.id;
+    const { name, username, image_url } = req.body;
+    
+    // Security check: Make sure users can only update their own profile
+    if (req.user.id !== parseInt(userId)) {
+      return res.status(403).json({ message: 'Unauthorized to update this user profile' });
+    }
+    
+    // Check if username is already taken (if username is being changed)
+    if (username) {
+      const usernameCheck = await pool.query(
+        'SELECT id FROM users WHERE username = $1 AND id != $2',
+        [username, userId]
+      );
+      
+      if (usernameCheck.rows.length > 0) {
+        return res.status(400).json({ message: 'Username is already taken' });
+      }
+    }
+    
+    // Build the query dynamically
+    const updateFields = [];
+    const queryParams = [];
+    let paramIndex = 1;
+    
+    if (name !== undefined) {
+      updateFields.push(`name = $${paramIndex++}`);
+      queryParams.push(name);
+    }
+    
+    if (username !== undefined) {
+      updateFields.push(`username = $${paramIndex++}`);
+      queryParams.push(username);
+    }
+    
+    if (image_url !== undefined) {
+      updateFields.push(`image_url = $${paramIndex++}`);
+      queryParams.push(image_url);
+    }
+    
+    if (updateFields.length === 0) {
+      return res.status(400).json({ message: 'No fields to update' });
+    }
+    
+    // Add the user ID to params
+    queryParams.push(userId);
+    
+    const updateQuery = `
+      UPDATE users 
+      SET ${updateFields.join(', ')} 
+      WHERE id = $${paramIndex} 
+      RETURNING id, name, username, email, role, image_url, created_at
+    `;
+    
+    const result = await pool.query(updateQuery, queryParams);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Error updating user:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
 module.exports = {
   signUpUser,
-  updateUserPreferences
+  updateUserPreferences,
+  updateUser,
 };

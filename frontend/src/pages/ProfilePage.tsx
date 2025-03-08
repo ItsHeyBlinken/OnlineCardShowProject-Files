@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
+import BackToDashboardButton from '../components/common/BackToDashboardButton';
 
 const defaultImage = '/images/logo1.jpg';
 
@@ -186,6 +187,11 @@ export const ProfilePage = () => {
   return (
     <div className="min-h-screen bg-gray-50 py-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {user?.is_seller && (
+          <div className="mb-4">
+            <BackToDashboardButton />
+          </div>
+        )}
         <h1 className="text-3xl font-bold text-gray-900">Welcome, {user?.username}</h1>
         <div className="mt-8">
           <h2 className="text-lg font-medium text-gray-900">Your Profile</h2>

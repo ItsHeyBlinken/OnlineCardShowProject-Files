@@ -12,6 +12,8 @@ interface User {
   favoriteTeam: string | null;
   favoritePlayers: string | null;
   image_url: string | null;
+  is_seller?: boolean;
+  subscriptionTier?: string;
 }
 
 interface AuthContextType {
@@ -24,7 +26,7 @@ interface AuthContextType {
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export const AuthProvider: React.FC = ({ children }) => {
+export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -61,7 +63,15 @@ export const AuthProvider: React.FC = ({ children }) => {
         axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
         const response = await axios.get('/api/auth/user');
         console.log('User data from checkAuth:', response.data);
-        setUser(response.data);
+        
+        // Update the user state with the refreshed data
+        if (response.data) {
+          // Add a timestamp to the image URL to prevent caching if it exists
+          if (response.data.image_url) {
+            response.data.image_url = `${response.data.image_url}?t=${new Date().getTime()}`;
+          }
+          setUser(response.data);
+        }
       } catch (error) {
         console.error('Auth check error:', error);
         logout();

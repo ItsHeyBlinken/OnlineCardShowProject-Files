@@ -26,8 +26,22 @@ export const SellerCard: React.FC<SellerCardProps> = ({ id, name, rating, sales,
             src={imageUrl}
             alt={name}
             className="h-full w-full rounded-md object-cover"
+            crossOrigin="anonymous"
             onError={(e) => {
               const target = e.target as HTMLImageElement;
+              // Try the proxy URL if it's an S3 image, otherwise fall back to default
+              if (target.src.includes('amazonaws.com') && !target.src.includes('/api/images/proxy/')) {
+                // Extract the S3 key from the full URL
+                // Example: https://bucket-name.s3.region.amazonaws.com/listings/123/image0_abc.jpg
+                // We need to extract everything after the bucket name: listings/123/image0_abc.jpg
+                const urlParts = target.src.split('.amazonaws.com/');
+                if (urlParts.length > 1) {
+                  const key = urlParts[1];
+                  target.src = `/api/images/proxy/${key}`;
+                  return;
+                }
+              }
+              // If all else fails, use default image
               target.src = '/images/logo1.jpg';
             }}
           />

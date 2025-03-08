@@ -3,6 +3,7 @@ import { useHistory } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { getSellerListings, updateListing, deleteListing } from '../api/listings';
 import ImageDropzone from '../components/common/ImageDropzone';
+import BackToDashboardButton from '../components/common/BackToDashboardButton';
 
 interface Listing {
   id: number;
@@ -197,6 +198,9 @@ const ManageListingsPage: React.FC = () => {
   
   return (
     <div className="container mx-auto px-4 py-8 max-w-7xl">
+      <div className="mb-4">
+        <BackToDashboardButton />
+      </div>
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-3xl font-bold text-gray-900">Manage Listings</h1>
         <button
@@ -427,7 +431,7 @@ const ManageListingsPage: React.FC = () => {
                           <div key={index} className="relative h-24 w-24">
                             <img 
                               src={url} 
-                              alt={`Listing image ${index + 1}`} 
+                              alt={`Listing ${index + 1}`} 
                               className="h-full w-full object-cover rounded-md"
                             />
                           </div>

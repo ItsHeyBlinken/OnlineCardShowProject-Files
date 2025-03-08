@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useHistory } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import axios from 'axios';
+import UserProfileEdit from '../components/profile/UserProfileEdit';
 
 const defaultImage = '/images/logo1.jpg';
 
@@ -27,6 +28,14 @@ const SellerDashboard = () => {
     const history = useHistory();
     const [hasListings, setHasListings] = useState(false);
     const [unreadMessages, setUnreadMessages] = useState(0);
+    const [showProfileEditor, setShowProfileEditor] = useState(false);
+
+    // Debug user image URL when it changes
+    useEffect(() => {
+        if (user?.image_url) {
+            console.log("Current profile image URL:", user.image_url);
+        }
+    }, [user?.image_url]);
 
     const getMaxListings = (tier: string) => {
         switch (tier) {
@@ -129,6 +138,22 @@ const SellerDashboard = () => {
 
     const handleCreateListing = () => {
         history.push('/seller/create-listing');
+    };
+
+    const handleProfileUpdated = async () => {
+        // Hide the profile editor
+        setShowProfileEditor(false);
+        
+        // Optionally refresh data or show success message
+        try {
+            // Refresh dashboard stats
+            await fetchDashboardStats();
+            
+            // Refresh unread message count
+            await fetchUnreadMessageCount();
+        } catch (error) {
+            console.error('Error refreshing dashboard data:', error);
+        }
     };
 
     if (loading) {
@@ -346,7 +371,7 @@ const SellerDashboard = () => {
                     </div>
                 )}
 
-                {/* Quick Actions - Only show if there are listings */}
+                {/* Action Cards - Only show if there are listings */}
                 {stats.activeListings > 0 && (
                     <div className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
                         <Link to="/manage-listings" className="block">
@@ -387,14 +412,144 @@ const SellerDashboard = () => {
                                     )}
                                 </h3>
                                 <p className="mt-2 text-sm text-gray-500">
-                                    {unreadMessages > 0 
-                                        ? `You have ${unreadMessages} unread message${unreadMessages > 1 ? 's' : ''}`
-                                        : 'View and respond to buyer messages'}
+                                    Check and respond to buyer messages
                                 </p>
                             </div>
                         </Link>
                     </div>
                 )}
+
+                {/* "Create Listing" call-to-action card if no listings */}
+                {stats.activeListings === 0 && (
+                    <div className="mt-8 bg-white overflow-hidden shadow rounded-lg">
+                        <div className="px-4 py-5 sm:p-6">
+                            <h3 className="text-lg leading-6 font-medium text-gray-900">
+                                Get Started
+                            </h3>
+                            <div className="mt-2 max-w-xl text-sm text-gray-500">
+                                <p>
+                                    You don't have any active listings yet. Create your first listing to start selling.
+                                </p>
+                            </div>
+                            <div className="mt-5">
+                                <button
+                                    onClick={handleCreateListing}
+                                    type="button"
+                                    className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                                >
+                                    Create Listing
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* User Profile Section - Moved below the action buttons */}
+                <div className="mt-8">
+                    <div className="bg-white shadow overflow-hidden sm:rounded-lg">
+                        <div className="px-4 py-5 sm:px-6 flex justify-between items-center">
+                            <div>
+                                <h3 className="text-lg leading-6 font-medium text-gray-900">
+                                    Seller Profile
+                                </h3>
+                                <p className="mt-1 max-w-2xl text-sm text-gray-500">
+                                    Manage your profile information and appearance
+                                </p>
+                            </div>
+                            {!showProfileEditor && (
+                                <button
+                                    onClick={() => setShowProfileEditor(true)}
+                                    className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                                >
+                                    Edit Profile
+                                </button>
+                            )}
+                        </div>
+                        
+                        {showProfileEditor ? (
+                            <div className="border-t border-gray-200 px-4 py-5 sm:px-6">
+                                <UserProfileEdit 
+                                    onProfileUpdated={handleProfileUpdated}
+                                    onCancel={() => setShowProfileEditor(false)}
+                                />
+                            </div>
+                        ) : (
+                            <div className="border-t border-gray-200">
+                                <dl>
+                                    <div className="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                                        <dt className="text-sm font-medium text-gray-500">
+                                            Profile Picture
+                                        </dt>
+                                        <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                                            <div className="h-24 w-24 rounded-full overflow-hidden border-2 border-gray-200">
+                                                <img 
+                                                    src={user?.image_url || '/images/logo1.jpg'} 
+                                                    alt="Profile"
+                                                    className="h-full w-full object-cover"
+                                                    crossOrigin="anonymous"
+                                                    onError={(e) => {
+                                                        // Fallback to default image if any error occurs
+                                                        e.currentTarget.src = '/images/logo1.jpg';
+                                                    }}
+                                                />
+                                            </div>
+                                        </dd>
+                                    </div>
+                                    <div className="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                                        <dt className="text-sm font-medium text-gray-500">
+                                            Full name
+                                        </dt>
+                                        <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                                            {user?.name}
+                                        </dd>
+                                    </div>
+                                    <div className="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                                        <dt className="text-sm font-medium text-gray-500">
+                                            Username
+                                        </dt>
+                                        <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                                            {user?.username}
+                                        </dd>
+                                    </div>
+                                    <div className="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                                        <dt className="text-sm font-medium text-gray-500">
+                                            Email address
+                                        </dt>
+                                        <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                                            {user?.email}
+                                        </dd>
+                                    </div>
+                                    <div className="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                                        <dt className="text-sm font-medium text-gray-500">
+                                            Account type
+                                        </dt>
+                                        <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                                            {user?.role === 'seller' ? 'Seller' : 'Buyer'}
+                                        </dd>
+                                    </div>
+                                    <div className="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                                        <dt className="text-sm font-medium text-gray-500">
+                                            Member since
+                                        </dt>
+                                        <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                                            {user?.created_at ? new Date(user.created_at).toLocaleDateString() : 'N/A'}
+                                        </dd>
+                                    </div>
+                                    {stats.subscriptionTier && (
+                                        <div className="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                                            <dt className="text-sm font-medium text-gray-500">
+                                                Subscription tier
+                                            </dt>
+                                            <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                                                {stats.subscriptionTier}
+                                            </dd>
+                                        </div>
+                                    )}
+                                </dl>
+                            </div>
+                        )}
+                    </div>
+                </div>
             </div>
         </div>
     );

@@ -3,6 +3,7 @@ import React from 'react';
 import { Button } from '../components/ui/Button'; // Corrected import path
 import { Input } from '../components/ui/Input'; // Corrected import path
 import axios from 'axios';
+import BackToDashboardButton from '../components/common/BackToDashboardButton';
 
 export const SellerCustomizationPage = () => {
   const [formData, setFormData] = React.useState({
@@ -25,6 +26,9 @@ export const SellerCustomizationPage = () => {
   return (
     <div className="min-h-screen bg-gray-50 py-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="mb-4">
+          <BackToDashboardButton />
+        </div>
         <h1 className="text-3xl font-bold text-gray-900 mb-8">Customize Your Store</h1>
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>

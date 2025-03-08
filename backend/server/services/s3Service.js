@@ -1,4 +1,4 @@
-const s3 = require('../config/s3Config');
+const { s3, getPublicUrl } = require('../config/s3Config');
 const { v4: uuidv4 } = require('uuid');
 
 /**
@@ -27,11 +27,16 @@ const uploadFileToS3 = async (fileBuffer, originalFilename, fileType, listingId,
     
     try {
         const uploadResult = await s3.upload(params).promise();
+        console.log('S3 upload successful:', uploadResult);
+        
+        // Create a proxy URL to avoid CORS issues
+        const proxyUrl = `/api/images/proxy/${key}`;
         
         return {
             success: true,
-            url: uploadResult.Location,
-            key: uploadResult.Key
+            url: proxyUrl, // Use proxy URL instead of S3 URL
+            key: uploadResult.Key,
+            s3Url: uploadResult.Location // Keep the original S3 URL for reference
         };
     } catch (error) {
         console.error('Error uploading to S3:', error);

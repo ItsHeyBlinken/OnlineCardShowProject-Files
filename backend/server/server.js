@@ -13,13 +13,26 @@ const auth = require('./middleware/auth');
 const pool = require('./db');
 const fs = require('fs');
 const path = require('path');
+const { s3, getPublicUrl } = require('./config/s3Config');
 
 // Run database migrations
 const runDatabaseMigrations = async () => {
   try {
     console.log('Running database schema migrations...');
+    
+    // Run existing migrations
     const schemaUpdateSQL = fs.readFileSync(path.join(__dirname, 'sql', 'update_listings_schema.sql'), 'utf8');
     await pool.query(schemaUpdateSQL);
+    
+    // Run the new migration to add image_url column
+    try {
+      const addImageUrlColumn = fs.readFileSync(path.join(__dirname, 'sql', 'add_image_url_column.sql'), 'utf8');
+      await pool.query(addImageUrlColumn);
+      console.log('Added image_url column to users table if not present');
+    } catch (migrationError) {
+      console.error('Error running image_url column migration:', migrationError);
+    }
+    
     console.log('Database schema migrations completed successfully');
   } catch (error) {
     console.error('Error running database migrations:', error);
@@ -43,6 +56,9 @@ const imageRoutes = require('./routes/images'); // Add the new image routes
 app.use(cors());
 app.use(express.json());
 
+// Serve static files from the uploads directory
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+
 // Debug middleware to log all requests
 app.use((req, res, next) => {
     console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
@@ -61,6 +77,41 @@ app.use('/api/stores', storesRoutes);
 app.use('/api/sellers', sellersRouter); // This will prefix all routes in sellersRouter with /api/sellers
 app.use('/api/messages', messagesRouter);
 app.use('/api/images', imageRoutes); // Add the image routes
+
+// Simple route to test S3 access
+app.get('/api/test-s3', async (req, res) => {
+  try {
+    const bucketParams = {
+      Bucket: process.env.AWS_S3_BUCKET_NAME
+    };
+    
+    // List objects in the bucket
+    const data = await s3.listObjectsV2(bucketParams).promise();
+    
+    if (data.Contents && data.Contents.length > 0) {
+      // Get first image in the bucket
+      const firstImage = data.Contents[0];
+      
+      // Generate a signed URL for the image
+      const signedUrl = getPublicUrl(firstImage.Key);
+      
+      res.json({
+        message: 'S3 connection successful',
+        objectCount: data.Contents.length,
+        firstKey: firstImage.Key,
+        signedUrl
+      });
+    } else {
+      res.json({
+        message: 'S3 connection successful but bucket is empty',
+        objectCount: 0
+      });
+    }
+  } catch (error) {
+    console.error('S3 test error:', error);
+    res.status(500).json({ message: 'S3 connection failed', error: error.message });
+  }
+});
 
 // Basic test route
 app.get('/', (req, res) => {

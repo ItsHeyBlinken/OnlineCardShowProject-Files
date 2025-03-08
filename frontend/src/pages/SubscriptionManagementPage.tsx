@@ -1,6 +1,7 @@
 import React, { FC } from 'react';
 import { useHistory } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import BackToDashboardButton from '../components/common/BackToDashboardButton';
 
 const SubscriptionManagementPage: FC = () => {
   const history = useHistory();
@@ -20,6 +21,9 @@ const SubscriptionManagementPage: FC = () => {
   return (
     <div className="min-h-screen bg-gray-50 py-12">
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="mb-4">
+          <BackToDashboardButton />
+        </div>
         <div className="bg-white shadow rounded-lg p-8">
           <div className="mb-8">
             <h1 className="text-2xl font-bold text-gray-900">Subscription Management</h1>

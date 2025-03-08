@@ -15,4 +15,18 @@ BEGIN
         WHERE image_url IS NOT NULL AND image_url != '';
     END IF;
 END
+$$;
+
+-- Check if image_url column exists in users table. If not, add it.
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 
+        FROM information_schema.columns 
+        WHERE table_name='users' AND column_name='image_url'
+    ) THEN
+        -- Add image_url column to users table
+        ALTER TABLE users ADD COLUMN image_url TEXT;
+    END IF;
+END
 $$; 

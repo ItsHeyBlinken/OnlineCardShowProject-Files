@@ -25,25 +25,41 @@ const LazyImage: React.FC<LazyImageProps> = ({
     setError(false);
     setImageSrc(null);
 
+    // Try to load the image directly first
+    tryLoadImage(src);
+  }, [src, errorFallbackUrl]);
+
+  const tryLoadImage = (imageUrl: string) => {
     const img = new Image();
-    img.src = src;
+    img.crossOrigin = "anonymous";
+    img.src = imageUrl;
 
     img.onload = () => {
       setIsLoaded(true);
-      setImageSrc(src);
+      setImageSrc(imageUrl);
     };
 
     img.onerror = () => {
+      // If direct S3 URL fails, try using the proxy URL
+      if (imageUrl.includes('amazonaws.com') && !imageUrl.includes('/api/images/proxy/')) {
+        // Extract the S3 key from the full URL
+        // Example: https://bucket-name.s3.region.amazonaws.com/listings/123/image0_abc.jpg
+        // We need to extract everything after the bucket name: listings/123/image0_abc.jpg
+        const urlParts = imageUrl.split('.amazonaws.com/');
+        if (urlParts.length > 1) {
+          const key = urlParts[1];
+          const proxyUrl = `/api/images/proxy/${key}`;
+          // Try loading with proxy URL
+          tryLoadImage(proxyUrl);
+          return;
+        }
+      }
+      
+      // If all attempts fail, use the fallback image
       setError(true);
       setImageSrc(errorFallbackUrl);
     };
-
-    // Clean up
-    return () => {
-      img.onload = null;
-      img.onerror = null;
-    };
-  }, [src, errorFallbackUrl]);
+  };
 
   if (!isLoaded) {
     return (
@@ -56,9 +72,10 @@ const LazyImage: React.FC<LazyImageProps> = ({
   return (
     <img
       src={imageSrc || ''}
-      alt={error ? `Failed to load image: ${alt}` : alt}
+      alt={error ? `Failed to load: ${alt}` : alt}
       className={className}
       loading="lazy"
+      crossOrigin="anonymous"
     />
   );
 };

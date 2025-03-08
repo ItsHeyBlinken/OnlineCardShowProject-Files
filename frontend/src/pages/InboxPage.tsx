@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
 import { Link, useLocation } from 'react-router-dom';
+import BackToDashboardButton from '../components/common/BackToDashboardButton';
 
 interface Message {
     id: number;
@@ -286,6 +287,9 @@ const InboxPage: React.FC = () => {
 
     return (
         <div className="container mx-auto px-4 py-8 max-w-6xl">
+            <div className="mb-4">
+                <BackToDashboardButton />
+            </div>
             <h1 className="text-3xl font-bold mb-6">Messages</h1>
             
             {error && <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">{error}</div>}

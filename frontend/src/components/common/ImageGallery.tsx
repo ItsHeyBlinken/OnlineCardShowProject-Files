@@ -98,7 +98,7 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({ images, alt }) => {
           >
             <LazyImage
               src={images[selectedIndex]}
-              alt={`${alt} - Image ${selectedIndex + 1}`}
+              alt={`${alt} - #${selectedIndex + 1}`}
               className="max-w-full max-h-full object-contain"
               placeholderClassName="w-full h-full"
             />

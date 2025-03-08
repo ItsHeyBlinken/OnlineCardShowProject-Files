@@ -86,19 +86,26 @@ router.post('/logout', logoutUser);
 // Protected routes
 router.get('/user', auth, async (req, res) => {
     try {
-        const userId = req.user.id;
-        const result = await pool.query(
-            'SELECT id, name, username, email, role, created_at FROM users WHERE id = $1',
-            [userId]
-        );
+        if (!req.user) {
+            return res.status(401).json({ message: 'No authenticated user' });
+        }
 
-        if (result.rows.length === 0) {
+        const userResult = await pool.query(
+            'SELECT id, name, username, email, role, created_at, image_url, favorite_sport, favorite_team, favorite_players FROM users WHERE id = $1',
+            [req.user.id]
+        );
+        
+        const user = userResult.rows[0];
+        if (!user) {
             return res.status(404).json({ message: 'User not found' });
         }
 
-        res.json(result.rows[0]);
+        // Log the image URL for debugging
+        console.log('GET /user endpoint - User image URL:', user.image_url);
+
+        res.json(user);
     } catch (error) {
-        console.error('Get user error:', error);
+        console.error('Error getting current user:', error);
         res.status(500).json({ message: 'Server error' });
     }
 });
@@ -253,6 +260,216 @@ router.get('/me', auth, async (req, res) => {
         console.error('Get user error:', error);
         res.status(500).json({ message: 'Server error' });
     }
+});
+
+// Protected routes that require authentication
+router.get('/user', auth, getCurrentUser);
+router.post('/logout', auth, logoutUser);
+router.post('/become-seller', auth, becomeSeller);
+
+// Update user profile
+router.put('/profile', auth, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { 
+      name, 
+      username, 
+      image_url, 
+      favorite_sport, 
+      favorite_team, 
+      favorite_players 
+    } = req.body;
+    
+    console.log('Profile update request received:', { 
+      userId, 
+      name, 
+      username, 
+      image_url,
+      favorite_sport,
+      favorite_team,
+      favorite_players
+    });
+    
+    // Check if username is already taken (if username is being changed)
+    if (username) {
+      const usernameCheck = await pool.query(
+        'SELECT id FROM users WHERE username = $1 AND id != $2',
+        [username, userId]
+      );
+      
+      if (usernameCheck.rows.length > 0) {
+        return res.status(400).json({ message: 'Username is already taken' });
+      }
+    }
+    
+    // Get current column names from users table
+    const tableInfoQuery = `
+      SELECT column_name 
+      FROM information_schema.columns 
+      WHERE table_name = 'users'
+    `;
+    const tableInfo = await pool.query(tableInfoQuery);
+    const columnNames = tableInfo.rows.map(row => row.column_name);
+    
+    console.log('Available columns in users table:', columnNames);
+    
+    // Build the query dynamically
+    const updateFields = [];
+    const queryParams = [];
+    let paramIndex = 1;
+    
+    if (name !== undefined && columnNames.includes('name')) {
+      updateFields.push(`name = $${paramIndex++}`);
+      queryParams.push(name);
+    }
+    
+    if (username !== undefined && columnNames.includes('username')) {
+      updateFields.push(`username = $${paramIndex++}`);
+      queryParams.push(username);
+    }
+    
+    if (image_url !== undefined && columnNames.includes('image_url')) {
+      updateFields.push(`image_url = $${paramIndex++}`);
+      queryParams.push(image_url);
+      console.log('Adding image_url to update fields:', image_url);
+    } else if (image_url !== undefined) {
+      console.log('image_url column not found in table or value undefined:', { 
+        columnExists: columnNames.includes('image_url'),
+        imageUrlValue: image_url
+      });
+    }
+    
+    // Add preferences fields if they exist
+    if (favorite_sport !== undefined && columnNames.includes('favorite_sport')) {
+      updateFields.push(`favorite_sport = $${paramIndex++}`);
+      queryParams.push(favorite_sport);
+    }
+    
+    if (favorite_team !== undefined && columnNames.includes('favorite_team')) {
+      updateFields.push(`favorite_team = $${paramIndex++}`);
+      queryParams.push(favorite_team);
+    }
+    
+    if (favorite_players !== undefined && columnNames.includes('favorite_players')) {
+      updateFields.push(`favorite_players = $${paramIndex++}`);
+      queryParams.push(favorite_players);
+    }
+    
+    if (updateFields.length === 0) {
+      return res.status(400).json({ message: 'No valid fields to update' });
+    }
+    
+    // Add the user ID to params
+    queryParams.push(userId);
+    
+    const updateQuery = `
+      UPDATE users 
+      SET ${updateFields.join(', ')} 
+      WHERE id = $${paramIndex} 
+      RETURNING *
+    `;
+    
+    console.log('Executing update query:', {
+      query: updateQuery,
+      params: queryParams
+    });
+    
+    const result = await pool.query(updateQuery, queryParams);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    
+    console.log('User updated successfully:', result.rows[0]);
+    
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Error updating user profile:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Update user preferences
+router.put('/preferences', auth, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { favorite_sport, favorite_team, favorite_players } = req.body;
+
+    await pool.query(
+      'UPDATE users SET favorite_sport = $1, favorite_team = $2, favorite_players = $3 WHERE id = $4',
+      [favorite_sport, favorite_team, favorite_players, userId]
+    );
+
+    res.status(200).json({ message: 'Preferences updated successfully' });
+  } catch (error) {
+    console.error('Error updating preferences:', error);
+    res.status(500).json({ message: 'Server error while updating preferences' });
+  }
+});
+
+// Debug route to check if the image_url column exists
+router.get('/check-schema', auth, async (req, res) => {
+  try {
+    // Check if image_url column exists in users table
+    const tableInfoQuery = `
+      SELECT column_name, data_type 
+      FROM information_schema.columns 
+      WHERE table_name = 'users'
+    `;
+    const tableInfo = await pool.query(tableInfoQuery);
+    
+    // Check if the schema includes the image_url column
+    const hasImageUrlColumn = tableInfo.rows.some(
+      row => row.column_name === 'image_url'
+    );
+    
+    // Get a sample user record
+    const userQuery = 'SELECT * FROM users WHERE id = $1';
+    const userResult = await pool.query(userQuery, [req.user.id]);
+    
+    res.json({
+      columns: tableInfo.rows,
+      hasImageUrlColumn,
+      userSample: userResult.rows[0] || null
+    });
+  } catch (error) {
+    console.error('Error checking schema:', error);
+    res.status(500).json({ message: 'Error checking schema', error: error.message });
+  }
+});
+
+// Debug route to check user image URL
+router.get('/check-image', auth, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    
+    // Get the user record with image_url
+    const userQuery = 'SELECT id, username, email, image_url FROM users WHERE id = $1';
+    const userResult = await pool.query(userQuery, [userId]);
+    
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    
+    const user = userResult.rows[0];
+    
+    // Check if the image_url is accessible (for S3 URLs)
+    let imageStatus = 'No image URL';
+    if (user.image_url) {
+      imageStatus = 'Image URL exists';
+      console.log('User image URL exists:', user.image_url);
+    }
+    
+    res.json({
+      userId: user.id,
+      username: user.username,
+      image_url: user.image_url,
+      imageStatus
+    });
+  } catch (error) {
+    console.error('Error checking user image:', error);
+    res.status(500).json({ message: 'Error checking user image', error: error.message });
+  }
 });
 
 module.exports = router;
