@@ -28,6 +28,7 @@ interface Conversation {
 
 const InboxPage: React.FC = () => {
     const { user } = useAuth();
+    const location = useLocation();
     const [conversations, setConversations] = useState<Conversation[]>([]);
     const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
     const [messages, setMessages] = useState<Message[]>([]);
@@ -45,54 +46,8 @@ const InboxPage: React.FC = () => {
     });
     const [error, setError] = useState('');
     const messagesEndRef = useRef<HTMLDivElement>(null);
-    const location = useLocation();
 
-    useEffect(() => {
-        fetchConversations();
-    }, [user]);
-
-    useEffect(() => {
-        if (selectedConversation) {
-            fetchMessages(selectedConversation.userId, selectedConversation.listingId);
-        }
-    }, [selectedConversation]);
-
-    useEffect(() => {
-        scrollToBottom();
-    }, [messages]);
-
-    // Handle new message request from URL query params
-    useEffect(() => {
-        if (user && location.search) {
-            const params = new URLSearchParams(location.search);
-            if (params.get('new') === 'true') {
-                const receiverId = Number(params.get('receiverId'));
-                const listingId = Number(params.get('listingId'));
-                const receiverName = params.get('receiverName') || 'Seller';
-                const listingTitle = params.get('listingTitle') || '';
-                
-                if (receiverId && !isNaN(receiverId)) {
-                    // Create a temporary conversation for the new message
-                    const tempConversation: Conversation = {
-                        userId: receiverId,
-                        username: receiverName,
-                        listingId: listingId || null,
-                        listingTitle: listingTitle || null,
-                        lastMessage: {} as Message, // Empty placeholder
-                        unreadCount: 0
-                    };
-                    
-                    setSelectedConversation(tempConversation);
-                    setMessages([]);
-                }
-            }
-        }
-    }, [location.search, user]);
-
-    const scrollToBottom = () => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    };
-
+    // Define fetchConversations function before using it in useEffect
     const fetchConversations = async () => {
         if (!user) return;
         
@@ -154,6 +109,52 @@ const InboxPage: React.FC = () => {
         } finally {
             setLoading(prev => ({ ...prev, conversations: false }));
         }
+    };
+
+    useEffect(() => {
+        fetchConversations();
+    }, [user]);
+
+    useEffect(() => {
+        if (selectedConversation) {
+            fetchMessages(selectedConversation.userId, selectedConversation.listingId);
+        }
+    }, [selectedConversation]);
+
+    useEffect(() => {
+        scrollToBottom();
+    }, [messages]);
+
+    // Handle new message request from URL query params
+    useEffect(() => {
+        if (user && location.search) {
+            const params = new URLSearchParams(location.search);
+            if (params.get('new') === 'true') {
+                const receiverId = Number(params.get('receiverId'));
+                const listingId = Number(params.get('listingId'));
+                const receiverName = params.get('receiverName') || 'Seller';
+                const listingTitle = params.get('listingTitle') || '';
+                
+                if (receiverId && !isNaN(receiverId)) {
+                    // Create a temporary conversation for the new message
+                    const tempConversation: Conversation = {
+                        userId: receiverId,
+                        username: receiverName,
+                        listingId: listingId || null,
+                        listingTitle: listingTitle || null,
+                        lastMessage: {} as Message, // Empty placeholder
+                        unreadCount: 0
+                    };
+                    
+                    setSelectedConversation(tempConversation);
+                    setMessages([]);
+                }
+            }
+        }
+    }, [location.search, user]);
+
+    const scrollToBottom = () => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     };
 
     const fetchMessages = async (userId: number, listingId: number | null) => {
