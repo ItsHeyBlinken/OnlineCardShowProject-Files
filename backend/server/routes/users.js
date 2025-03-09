@@ -6,6 +6,12 @@ const fs = require('fs');
 const pool = require('../db');
 const { getUser, createUser, updateUser, deleteUser, updateUserPreferences } = require('../controllers/userController');
 const auth = require('../middleware/auth');
+const { 
+  getUserShippingAddress,
+  getAllUserShippingAddresses,
+  saveUserShippingAddress, 
+  deleteUserShippingAddress 
+} = require('../controllers/shippingAddressController');
 
 // Configure multer for profile image uploads
 const storage = multer.diskStorage({
@@ -83,5 +89,17 @@ router.post('/profile-image', auth, upload.single('profileImage'), async (req, r
     res.status(500).json({ message: 'Server error' });
   }
 });
+
+// Get a single shipping address (default)
+router.get('/:userId/shipping-address', auth, getUserShippingAddress);
+
+// Get all shipping addresses for a user
+router.get('/:userId/shipping-addresses', auth, getAllUserShippingAddresses);
+
+// Create or update a shipping address
+router.post('/:userId/shipping-address', auth, saveUserShippingAddress);
+
+// Delete a shipping address
+router.delete('/:userId/shipping-address/:addressId', auth, deleteUserShippingAddress);
 
 module.exports = router;

@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useHistory } from 'react-router-dom';
 import axios from 'axios';
 import ImageGallery from '../components/common/ImageGallery';
 import { useAuth } from '../hooks/useAuth';
+import { useCart, CartItem } from '../contexts/CartContext';
 
 interface Listing {
   id: number;
@@ -22,12 +23,27 @@ interface Listing {
   card_number?: string;
 }
 
+// Helper function to ensure price is a number before formatting
+const formatPrice = (price: any): string => {
+  const numPrice = typeof price === 'string' ? parseFloat(price) : Number(price);
+  return isNaN(numPrice) ? '0.00' : numPrice.toFixed(2);
+};
+
 const ListingDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const [listing, setListing] = useState<Listing | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [quantity, setQuantity] = useState(1);
   const { user } = useAuth();
+  const { addToCart } = useCart();
+  const history = useHistory();
+  const [sellerShippingInfo, setSellerShippingInfo] = useState({
+    offers_free_shipping: false,
+    standard_shipping_fee: 0,
+    shipping_policy: '',
+    uses_calculated_shipping: false
+  });
   
   useEffect(() => {
     const fetchListing = async () => {
@@ -47,6 +63,21 @@ const ListingDetailPage: React.FC = () => {
       fetchListing();
     }
   }, [id]);
+
+  useEffect(() => {
+    if (listing?.seller_id) {
+      const fetchSellerShippingInfo = async () => {
+        try {
+          const response = await axios.get(`/api/shipping/policy/${listing.seller_id}`);
+          setSellerShippingInfo(response.data);
+        } catch (error) {
+          console.error('Error fetching seller shipping info:', error);
+        }
+      };
+      
+      fetchSellerShippingInfo();
+    }
+  }, [listing?.seller_id]);
 
   // Helper function to get image URLs from a listing, with fallback to the single image_url
   const getListingImages = (listing: Listing): string[] => {
@@ -73,6 +104,27 @@ const ListingDetailPage: React.FC = () => {
     window.location.href = `/inbox?new=true&receiverId=${listing?.seller_id}&listingId=${id}&receiverName=${encodeURIComponent(listing?.seller_name || '')}&listingTitle=${encodeURIComponent(listing?.title || '')}`;
   };
 
+  const handleAddToCart = () => {
+    if (!listing) return;
+    
+    const cartItem: CartItem = {
+      id: listing.id,
+      title: listing.title,
+      price: listing.price,
+      quantity: quantity,
+      image_url: listing.image_url || undefined,
+      seller_id: listing.seller_id
+    };
+    
+    addToCart(cartItem);
+    
+    // Show confirmation message
+    const confirmMessage = window.confirm('Item added to cart! Would you like to view your cart?');
+    if (confirmMessage) {
+      history.push('/cart');
+    }
+  };
+
   if (loading) return <div className="text-center py-8">Loading...</div>;
   if (error) return <div className="text-center py-8 text-red-600">{error}</div>;
   if (!listing) return <div className="text-center py-8">Listing not found</div>;
@@ -95,7 +147,7 @@ const ListingDetailPage: React.FC = () => {
             <h1 className="text-3xl font-bold text-gray-900 mb-4">{listing.title}</h1>
             
             <div className="flex items-center mb-4">
-              <span className="text-2xl font-bold text-green-600">${Number(listing.price).toFixed(2)}</span>
+              <span className="text-2xl font-bold text-green-600">${formatPrice(listing.price)}</span>
               <span className="ml-2 px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
                 {listing.condition}
               </span>
@@ -156,8 +208,73 @@ const ListingDetailPage: React.FC = () => {
               </Link>
             </div>
             
+            <div className="mt-6 mb-4">
+              <label htmlFor="quantity" className="block text-sm font-medium text-gray-700 mb-1">
+                Quantity
+              </label>
+              <div className="flex items-center w-32 border border-gray-300 rounded-md overflow-hidden">
+                <button
+                  type="button"
+                  className="px-3 py-2 bg-gray-100 hover:bg-gray-200"
+                  onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                >
+                  -
+                </button>
+                <input
+                  type="number"
+                  id="quantity"
+                  name="quantity"
+                  min="1"
+                  value={quantity}
+                  onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
+                  className="w-full text-center border-0 focus:ring-0 focus:outline-none"
+                />
+                <button
+                  type="button"
+                  className="px-3 py-2 bg-gray-100 hover:bg-gray-200"
+                  onClick={() => setQuantity(quantity + 1)}
+                >
+                  +
+                </button>
+              </div>
+            </div>
+            
+            <div className="border-t border-gray-200 pt-4 mb-6">
+              <h2 className="text-lg font-semibold mb-2">Shipping Information</h2>
+              
+              {sellerShippingInfo.offers_free_shipping ? (
+                <div className="flex items-center text-green-600">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                  <span className="font-medium">Free Shipping</span>
+                </div>
+              ) : sellerShippingInfo.standard_shipping_fee > 0 ? (
+                <p className="text-gray-700">
+                  Standard shipping fee: ${formatPrice(sellerShippingInfo.standard_shipping_fee)}
+                </p>
+              ) : sellerShippingInfo.uses_calculated_shipping ? (
+                <p className="text-gray-700">
+                  Shipping cost calculated at checkout based on location and weight.
+                </p>
+              ) : (
+                <p className="text-gray-700">
+                  Shipping cost will be calculated at checkout.
+                </p>
+              )}
+              
+              {sellerShippingInfo.shipping_policy && (
+                <div className="mt-2 text-sm text-gray-600">
+                  <span className="font-medium">Shipping Policy:</span> {sellerShippingInfo.shipping_policy}
+                </div>
+              )}
+            </div>
+            
             <div className="mt-8 space-x-4">
-              <button className="px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition">
+              <button 
+                className="px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition"
+                onClick={handleAddToCart}
+              >
                 Add to Cart
               </button>
               <button 

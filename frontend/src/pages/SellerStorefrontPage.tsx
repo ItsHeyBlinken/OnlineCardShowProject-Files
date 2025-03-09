@@ -3,6 +3,12 @@ import { useAuth } from '../hooks/useAuth';
 import axios from 'axios';
 import { Link, useParams } from 'react-router-dom';
 
+// Helper function to ensure price is a number before formatting
+const formatPrice = (price: any): string => {
+  const numPrice = typeof price === 'string' ? parseFloat(price) : Number(price);
+  return isNaN(numPrice) ? '0.00' : numPrice.toFixed(2);
+};
+
 interface Listing {
     id: number;
     title: string;
@@ -14,6 +20,16 @@ interface Listing {
     seller_name?: string;
 }
 
+interface SellerProfile {
+    business_name?: string;
+    description?: string;
+    image_url?: string;
+    offers_free_shipping: boolean;
+    standard_shipping_fee: number;
+    shipping_policy?: string;
+    uses_calculated_shipping: boolean;
+}
+
 const defaultImage = '/images/logo1.jpg';
 
 const SellerStorefrontPage = () => {
@@ -21,6 +37,7 @@ const SellerStorefrontPage = () => {
     const { id: sellerId } = useParams<{ id: string }>();
     const [listings, setListings] = useState<Listing[]>([]);
     const [sellerName, setSellerName] = useState<string>('');
+    const [sellerProfile, setSellerProfile] = useState<SellerProfile | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
 
@@ -60,6 +77,15 @@ const SellerStorefrontPage = () => {
                         setSellerName('Seller');
                     }
                 }
+                
+                // Fetch seller's shipping policy
+                try {
+                    const shippingResponse = await axios.get(`/api/shipping/policy/${id}`);
+                    setSellerProfile(shippingResponse.data);
+                } catch (shippingError) {
+                    console.error('Error fetching shipping policy:', shippingError);
+                    // Not setting an error state here since shipping policy is optional
+                }
             } catch (error) {
                 console.error('Error fetching data:', error);
                 setError('Failed to load storefront data');
@@ -77,7 +103,7 @@ const SellerStorefrontPage = () => {
     return (
         <div className="min-h-screen bg-gray-100 py-8">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <h1 className="text-3xl font-bold text-gray-900 mb-8">{sellerName}'s Store</h1>
+                <h1 className="text-3xl font-bold text-gray-900 mb-4">{sellerName}'s Store</h1>
                 
                 {listings.length > 0 ? (
                     <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -107,10 +133,18 @@ const SellerStorefrontPage = () => {
                                             {listing.condition}
                                         </span>
                                     </div>
-                                    <div className="mt-2">
+                                    <div className="mt-2 flex items-center justify-between">
                                         <span className="inline-block bg-gray-200 rounded-full px-3 py-1 text-sm font-semibold text-gray-700">
                                             {listing.category}
                                         </span>
+                                        {sellerProfile?.offers_free_shipping && (
+                                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                                                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                                </svg>
+                                                Free Shipping
+                                            </span>
+                                        )}
                                     </div>
                                 </div>
                             </Link>

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
 import BackToDashboardButton from '../components/common/BackToDashboardButton';
+import ShippingAddressForm from '../components/profile/ShippingAddressForm';
 
 const defaultImage = '/images/logo1.jpg';
 
@@ -375,6 +376,11 @@ export const ProfilePage = () => {
                 View Order History
               </button>
             </Link>
+          </div>
+
+          {/* Shipping Address Section */}
+          <div className="mt-8">
+            <ShippingAddressForm />
           </div>
         </div>
 

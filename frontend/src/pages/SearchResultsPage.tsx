@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useHistory, Link } from 'react-router-dom';
 import axios from 'axios';
+import useShippingPolicies from '../hooks/useShippingPolicies';
 
 interface SearchResult {
     id: number;
@@ -12,6 +13,7 @@ interface SearchResult {
     seller_name: string;
     description: string;
     category: string;
+    offers_free_shipping?: boolean;
 }
 
 interface FilterState {
@@ -65,14 +67,65 @@ const SearchResultsPage: React.FC = () => {
             });
 
             const response = await axios.get(`/api/search?${params.toString()}`);
-            setResults(response.data.results);
+            const resultsData = response.data.results;
+            
+            // Set initial results without shipping info
+            setResults(resultsData);
             setTotalPages(Math.ceil(response.data.total / ITEMS_PER_PAGE));
+            
+            // Get unique seller IDs for the hook
+            const sellerIds = Array.from(
+                new Set(
+                    resultsData.map((result: SearchResult) => result.seller_id)
+                )
+            ) as number[];
+            
+            // Use the hook to fetch shipping policies
+            const { policies } = await fetchShippingPolicies(sellerIds);
+            
+            // Apply shipping info to results
+            setResults(prevResults => 
+                prevResults.map(result => ({
+                    ...result,
+                    offers_free_shipping: policies[result.seller_id]?.offers_free_shipping || false
+                }))
+            );
         } catch (error) {
             console.error('Error fetching search results:', error);
             setError('Failed to fetch search results');
         } finally {
             setLoading(false);
         }
+    };
+
+    // Helper function to fetch shipping policies
+    const fetchShippingPolicies = async (sellerIds: number[]) => {
+        if (!sellerIds.length) return { policies: {} };
+        
+        const policies: Record<number, any> = {};
+        
+        try {
+            await Promise.all(
+                sellerIds.map(async (sellerId) => {
+                    try {
+                        const response = await axios.get(`/api/shipping/policy/${sellerId}`);
+                        policies[sellerId] = response.data;
+                    } catch (error) {
+                        console.error(`Error fetching shipping for seller ${sellerId}:`, error);
+                        policies[sellerId] = {
+                            offers_free_shipping: false,
+                            standard_shipping_fee: 0,
+                            shipping_policy: '',
+                            uses_calculated_shipping: false
+                        };
+                    }
+                })
+            );
+        } catch (error) {
+            console.error('Error fetching shipping policies:', error);
+        }
+        
+        return { policies };
     };
 
     useEffect(() => {
@@ -208,6 +261,14 @@ const SearchResultsPage: React.FC = () => {
                                     >
                                         Sold by {result.seller_name}
                                     </Link>
+                                    {result.offers_free_shipping && (
+                                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                            </svg>
+                                            Free Shipping
+                                        </span>
+                                    )}
                                 </div>
                             </div>
                         </div>

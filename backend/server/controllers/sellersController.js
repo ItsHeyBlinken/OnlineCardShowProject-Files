@@ -19,7 +19,7 @@ const getFeaturedSellers = async (req, res) => {
             GROUP BY u.id, u.username, u.email, sp.rating, sp.image_url
             HAVING COUNT(l.id) > 0
             ORDER BY RANDOM()
-            LIMIT 3`
+            LIMIT 6`
         );
 
         console.log('Featured sellers result:', {
@@ -72,7 +72,7 @@ const getDeals = async (req, res) => {
             JOIN users u ON l.seller_id = u.id
             WHERE l.active = true
             ORDER BY RANDOM()
-            LIMIT 2`
+            LIMIT 6`
         );
 
         res.json(result.rows);
@@ -97,7 +97,7 @@ const getRecentListings = async (req, res) => {
             JOIN users u ON l.seller_id = u.id
             WHERE l.active = true
             ORDER BY l.created_at DESC
-            LIMIT 4`
+            LIMIT 8`
         );
 
         res.json(result.rows);
