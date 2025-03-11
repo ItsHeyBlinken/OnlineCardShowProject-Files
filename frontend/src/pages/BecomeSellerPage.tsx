@@ -24,6 +24,7 @@ const BecomeSellerPage = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      // Register as a seller first
       await axios.post('/api/become-seller', {
         ...formData,
         subscriptionTier: formData.selectedTier
@@ -31,12 +32,17 @@ const BecomeSellerPage = () => {
       
       await checkAuth();
       
+      // After successful registration, redirect to Stripe Connect if not Basic tier
       if (formData.selectedTier !== 'Basic') {
         history.push('/subscription/checkout', { 
           tier: formData.selectedTier 
         });
       } else {
-        history.push('/seller/dashboard');
+        // For Basic tier, redirect to Stripe Connect onboarding
+        // Using Stripe's hosted OAuth redirect that's already configured in the Stripe dashboard
+        const stripeConnectUrl = `https://connect.stripe.com/oauth/authorize?redirect_uri=https://connect.stripe.com/hosted/oauth&client_id=ca_Rv7cwNQ36gQE4LTKSfJ5jfvoQuZeRTg1&state=onbrd_Rv7ffauEUWDOW30kGTw01kJC8J&response_type=code&scope=read_write&stripe_user[country]=US`;
+        
+        window.location.href = stripeConnectUrl;
       }
       
     } catch (error: any) {

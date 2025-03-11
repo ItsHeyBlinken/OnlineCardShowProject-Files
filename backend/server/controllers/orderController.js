@@ -8,7 +8,7 @@ const getOrder = async (req, res) => {
     const orderResult = await pool.query(
       `SELECT o.id, o.buyer_id as user_id, o.listing_id, o.price_at_purchase as total_amount, 
               o.subtotal, o.tax_amount, o.tax_rate, o.payment_id, o.status, o.shipping_info,
-              o.created_at, l.title, l.image_url
+              o.created_at, o.is_paid, l.title, l.image_url
        FROM orders o
        JOIN listings l ON o.listing_id = l.id
        WHERE o.id = $1`,
@@ -84,19 +84,21 @@ const createOrder = async (req, res) => {
           tax_amount, 
           tax_rate,
           payment_id,
-          shipping_info
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) 
+          shipping_info,
+          is_paid
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) 
         RETURNING id`,
         [
           userId, 
           item.id, 
           itemTotal, 
-          'paid', 
+          'pending',
           itemSubtotal,
           itemTax,
           taxRate,
           paymentId,
-          JSON.stringify(shippingInfo)
+          JSON.stringify(shippingInfo),
+          paymentId ? true : false
         ]
       );
       
@@ -135,7 +137,7 @@ const getUserOrders = async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT o.id, o.created_at, o.price_at_purchase as total_amount, 
-              o.subtotal, o.tax_amount, o.tax_rate, o.status,
+              o.subtotal, o.tax_amount, o.tax_rate, o.status, o.is_paid,
               l.id as listing_id, l.title, l.image_url,
               COALESCE(oi.quantity, 1) as quantity
        FROM orders o
@@ -154,6 +156,7 @@ const getUserOrders = async (req, res) => {
       subtotal: order.subtotal || order.total_amount,
       tax_amount: order.tax_amount || 0,
       status: order.status,
+      is_paid: order.is_paid || false,
       items: [{
         listing_id: order.listing_id,
         quantity: order.quantity,

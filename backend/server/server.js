@@ -119,6 +119,15 @@ const runDatabaseMigrations = async () => {
       console.error('Error creating user shipping addresses table:', shippingAddressesError);
     }
     
+    // Step 6: Add is_paid column to orders table
+    try {
+      const addIsPaidColumn = fs.readFileSync(path.join(__dirname, 'sql', 'add_is_paid_to_orders.sql'), 'utf8');
+      await pool.query(addIsPaidColumn);
+      console.log('Added is_paid column to orders table if not present');
+    } catch (isPaidColumnError) {
+      console.error('Error adding is_paid column to orders table:', isPaidColumnError);
+    }
+    
     console.log('Database schema migrations completed successfully');
   } catch (error) {
     console.error('Error running database migrations:', error);

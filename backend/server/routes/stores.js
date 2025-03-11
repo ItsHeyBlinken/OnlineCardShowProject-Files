@@ -26,12 +26,21 @@ router.get('/dashboard', auth, async (req, res) => {
             WHERE l.seller_id = $1`,
             [sellerId]
         );
+        
+        // Get Stripe Connect status
+        const stripeResult = await pool.query(
+            'SELECT stripe_account_id FROM seller_profiles WHERE user_id = $1',
+            [sellerId]
+        );
+        
+        const stripeConnected = stripeResult.rows.length > 0 && !!stripeResult.rows[0].stripe_account_id;
 
         const stats = {
             activeListings: parseInt(listingsResult.rows[0].active_listings),
             totalSales: parseFloat(salesResult.rows[0].total_sales || 0),
             totalOrders: parseInt(salesResult.rows[0].total_orders),
-            pendingOrders: parseInt(salesResult.rows[0].pending_orders || 0)
+            pendingOrders: parseInt(salesResult.rows[0].pending_orders || 0),
+            stripeConnected: stripeConnected
         };
 
         console.log('Sending stats:', stats);

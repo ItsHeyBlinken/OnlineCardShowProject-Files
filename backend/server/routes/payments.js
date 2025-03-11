@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const { authenticateToken } = require('../middleware/authMiddleware');
+const { pool } = require('../db');
 
 // Create a payment intent (step 1 of Stripe payment)
 router.post('/create-payment-intent', authenticateToken, async (req, res) => {
@@ -74,6 +75,34 @@ router.post('/webhook', async (req, res) => {
 
   // Return a 200 response to acknowledge receipt of the event
   res.send();
+});
+
+// Handle Stripe Connect OAuth callback
+router.get('/stripe/connect/callback', authenticateToken, async (req, res) => {
+  const { code, state } = req.query;
+  
+  try {
+    // Exchange the authorization code for an access token
+    const response = await stripe.oauth.token({
+      grant_type: 'authorization_code',
+      code,
+    });
+
+    // Get the connected account ID
+    const connectedAccountId = response.stripe_user_id;
+
+    // Store the connected account ID in your database
+    await pool.query(
+      'UPDATE seller_profiles SET stripe_account_id = $1 WHERE user_id = $2',
+      [connectedAccountId, req.user.id]
+    );
+
+    // Redirect to the seller dashboard with success message
+    res.redirect('/seller/dashboard?setup=success');
+  } catch (error) {
+    console.error('Error connecting Stripe account:', error);
+    res.redirect('/seller/dashboard?error=stripe_connect_failed');
+  }
 });
 
 module.exports = router; 

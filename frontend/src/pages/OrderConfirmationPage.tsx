@@ -33,40 +33,43 @@ export const OrderConfirmationPage: React.FC = () => {
     // Extract order ID from URL query parameters if available
     const params = new URLSearchParams(location.search);
     const id = params.get('id');
-    setOrderId(id);
     
-    // Clear the cart if it hasn't been cleared yet
-    clearCart();
+    if (id !== orderId) {
+      setOrderId(id);
+      
+      // Clear the cart if it hasn't been cleared yet
+      clearCart();
 
-    // If we have an orderId, fetch order details
-    if (id) {
-      setLoading(true);
-      axios.get(`/api/orders/${id}`)
-        .then(async response => {
-          setOrderDetails(response.data);
-          
-          // If there's shipping info with a method ID, fetch the shipping method details
-          if (response.data.shipping_info?.shipping_method_id) {
-            try {
-              const shippingResponse = await axios.get('/api/shipping/methods');
-              const methods = shippingResponse.data;
-              const method = methods.find((m: any) => m.id === response.data.shipping_info.shipping_method_id);
-              if (method) {
-                setShippingMethod(`${method.display_name} (${method.provider})`);
+      // If we have an orderId, fetch order details
+      if (id) {
+        setLoading(true);
+        axios.get(`/api/orders/${id}`)
+          .then(async response => {
+            setOrderDetails(response.data);
+            
+            // If there's shipping info with a method ID, fetch the shipping method details
+            if (response.data.shipping_info?.shipping_method_id) {
+              try {
+                const shippingResponse = await axios.get('/api/shipping/methods');
+                const methods = shippingResponse.data;
+                const method = methods.find((m: any) => m.id === response.data.shipping_info.shipping_method_id);
+                if (method) {
+                  setShippingMethod(`${method.display_name} (${method.provider})`);
+                }
+              } catch (error) {
+                console.error('Error fetching shipping method:', error);
               }
-            } catch (error) {
-              console.error('Error fetching shipping method:', error);
             }
-          }
-        })
-        .catch(error => {
-          console.error('Error fetching order details:', error);
-        })
-        .finally(() => {
-          setLoading(false);
-        });
+          })
+          .catch(error => {
+            console.error('Error fetching order details:', error);
+          })
+          .finally(() => {
+            setLoading(false);
+          });
+      }
     }
-  }, [location.search, clearCart]);
+  }, [location.search, clearCart, orderId]);
   
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">

@@ -13,6 +13,7 @@ interface DashboardStats {
     monthlyRevenue: number;
     subscriptionTier?: string;
     maxListings?: number;
+    stripeConnected?: boolean;
 }
 
 const SellerDashboard = () => {
@@ -21,7 +22,8 @@ const SellerDashboard = () => {
         totalSales: 0,
         activeListings: 0,
         pendingOrders: 0,
-        monthlyRevenue: 0
+        monthlyRevenue: 0,
+        stripeConnected: false
     });
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
@@ -36,6 +38,22 @@ const SellerDashboard = () => {
             console.log("Current profile image URL:", user.image_url);
         }
     }, [user?.image_url]);
+
+    // Check for URL parameters related to Stripe Connect
+    useEffect(() => {
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('setup') === 'success') {
+            // Show success toast or notification
+            alert('Your Stripe account has been connected successfully!');
+            // Remove the query parameters from the URL
+            history.replace('/seller/dashboard');
+        } else if (urlParams.get('error') === 'stripe_connect_failed') {
+            // Show error toast or notification
+            alert('There was an error connecting your Stripe account. Please try again.');
+            // Remove the query parameters from the URL
+            history.replace('/seller/dashboard');
+        }
+    }, [history]);
 
     const getMaxListings = (tier: string) => {
         switch (tier) {
@@ -85,7 +103,8 @@ const SellerDashboard = () => {
                 ...response.data,
                 activeListings: listingsResponse.data.length || 0,
                 subscriptionTier: tier,
-                maxListings
+                maxListings,
+                stripeConnected: response.data.stripeConnected || false
             });
             setError('');
         } catch (err: any) {
@@ -308,6 +327,42 @@ const SellerDashboard = () => {
                             </div>
                         </div>
                     </div>
+                </div>
+                
+                {/* Stripe Connect Status */}
+                <div className="mt-8 bg-white shadow rounded-lg p-6">
+                    <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-lg font-medium text-gray-900">Payment Processing</h3>
+                    </div>
+                    
+                    {stats.stripeConnected ? (
+                        <div className="flex items-center text-green-600">
+                            <svg className="h-5 w-5 mr-2" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                            </svg>
+                            <span>Your Stripe account is connected and ready to process payments.</span>
+                        </div>
+                    ) : (
+                        <div>
+                            <div className="flex items-center text-yellow-600 mb-4">
+                                <svg className="h-5 w-5 mr-2" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                                </svg>
+                                <span>You need to connect your Stripe account to receive payments for your sales.</span>
+                            </div>
+                            <button 
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    // Using Stripe's hosted OAuth redirect that's already configured
+                                    const stripeConnectUrl = `https://connect.stripe.com/oauth/authorize?redirect_uri=https://connect.stripe.com/hosted/oauth&client_id=ca_Rv7cwNQ36gQE4LTKSfJ5jfvoQuZeRTg1&state=onbrd_Rv7ffauEUWDOW30kGTw01kJC8J&response_type=code&scope=read_write&stripe_user[country]=US`;
+                                    window.location.href = stripeConnectUrl;
+                                }}
+                                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
+                            >
+                                Connect with Stripe
+                            </button>
+                        </div>
+                    )}
                 </div>
 
                 {/* Add Subscription Info Card */}
