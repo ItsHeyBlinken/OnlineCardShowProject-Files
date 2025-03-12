@@ -472,12 +472,20 @@ const SellerDashboard = () => {
                             </div>
                         </Link>
 
+                        <Link to="/seller/customize" className="block">
+                            <div className="border border-gray-200 rounded-lg p-6 hover:border-indigo-500 transition-colors">
+                                <h3 className="text-lg font-medium text-gray-900">Customize Storefront</h3>
+                                <p className="mt-2 text-sm text-gray-500">
+                                    Personalize your store appearance and layout
+                                </p>
+                            </div>
+                        </Link>
+
                         <Link
                             to="/seller/shipping"
-                            className="inline-flex justify-center items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                        >
-                            <span className="mr-2">
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            className="w-full flex items-center justify-center px-4 py-2 border border-gray-300 rounded-lg shadow-md text-base font-semibold text-gray-800 bg-white hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-600">
+                            <span className="mr-3">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
                                 </svg>
                             </span>
@@ -486,30 +494,7 @@ const SellerDashboard = () => {
                     </div>
                 )}
 
-                {/* "Create Listing" call-to-action card if no listings */}
-                {stats.activeListings === 0 && (
-                    <div className="mt-8 bg-white overflow-hidden shadow rounded-lg">
-                        <div className="px-4 py-5 sm:p-6">
-                            <h3 className="text-lg leading-6 font-medium text-gray-900">
-                                Get Started
-                            </h3>
-                            <div className="mt-2 max-w-xl text-sm text-gray-500">
-                                <p>
-                                    You don't have any active listings yet. Create your first listing to start selling.
-                                </p>
-                            </div>
-                            <div className="mt-5">
-                                <button
-                                    onClick={handleCreateListing}
-                                    type="button"
-                                    className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                                >
-                                    Create Listing
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                )}
+                {/* This section has been removed as per instructions */}
 
                 {/* User Profile Section - Moved below the action buttons */}
                 <div className="mt-8">

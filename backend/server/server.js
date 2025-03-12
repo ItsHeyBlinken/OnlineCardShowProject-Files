@@ -148,6 +148,7 @@ const messagesRouter = require('./routes/messages');
 const imageRoutes = require('./routes/images'); // Add the new image routes
 const paymentRoutes = require('./routes/payments'); // Add payment routes
 const shippingRoutes = require('./routes/shipping');
+const usersRoutes = require('./routes/users'); // Add users routes for shipping addresses
 
 // Middleware
 app.use(cors());
@@ -168,6 +169,11 @@ app.use((req, res, next) => {
     next();
 });
 
+// Health check route for frontend to check backend connectivity
+app.get('/api/health-check', (req, res) => {
+  res.status(200).json({ status: 'ok', message: 'Backend server is running' });
+});
+
 // Routes
 app.use('/api/listings', listingsRoutes);
 app.use('/api', signupRoutes);
@@ -182,6 +188,7 @@ app.use('/api/messages', messagesRouter);
 app.use('/api/images', imageRoutes); // Add the image routes
 app.use('/api/payments', paymentRoutes); // Add payment routes
 app.use('/api/shipping', shippingRoutes);
+app.use('/api/users', usersRoutes); // Add users routes for handling shipping addresses
 
 // Simple route to test S3 access
 app.get('/api/test-s3', async (req, res) => {

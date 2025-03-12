@@ -4,6 +4,8 @@ import { useAuth } from '../hooks/useAuth';
 import { getSellerListings, updateListing, deleteListing } from '../api/listings';
 import ImageDropzone from '../components/common/ImageDropzone';
 import BackToDashboardButton from '../components/common/BackToDashboardButton';
+import { handleApiError } from '../utils/errorHandler';
+import { formatPrice } from '../utils/formatters';
 
 interface Listing {
   id: number;
@@ -29,7 +31,7 @@ const ManageListingsPage: React.FC = () => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<number | null>(null);
   const history = useHistory();
-  const { user } = useAuth();
+  useAuth();
   
   // Form state for editing
   const [formData, setFormData] = useState({
@@ -125,12 +127,9 @@ const ManageListingsPage: React.FC = () => {
     try {
       const updatedListing = {
         ...formData,
-        price: parseFloat(formData.price),
-        // Map playerName to player_name for the API
+        price: parseFloat(formatPrice(formData.price)),
         player_name: formData.playerName,
-        // Map cardNumber to card_number for the API
         card_number: formData.cardNumber,
-        // Include image information if it was updated
         ...(isUpdatingImages && {
           image_urls: imageUrls,
           image_url: imageUrls.length > 0 ? imageUrls[0] : null,
@@ -140,26 +139,19 @@ const ManageListingsPage: React.FC = () => {
       
       await updateListing(editingListing.id, updatedListing);
       
-      // Update the listing in the state with new data including images
-      setListings(listings.map(listing => 
+      // Correctly update the listings state by ensuring the updated listing has a string image_url
+      const updatedListings = listings.map(listing => 
         listing.id === editingListing.id ? 
-          { 
-            ...listing, 
-            ...updatedListing,
-            player_name: updatedListing.player_name,
-            card_number: updatedListing.card_number,
-            image_url: isUpdatingImages && imageUrls.length > 0 ? imageUrls[0] : listing.image_url,
-            image_urls: isUpdatingImages ? imageUrls : listing.image_urls
-          } : 
+          { ...listing, ...updatedListing, image_url: updatedListing.image_url || '' } : 
           listing
-      ));
+      );
+      setListings(updatedListings);
       
       setShowEditModal(false);
       setEditingListing(null);
       setIsUpdatingImages(false);
-    } catch (err) {
-      console.error('Error updating listing:', err);
-      setError('Failed to update listing. Please try again.');
+    } catch (error) {
+      console.error('Error updating listing:', handleApiError(error));
     }
   };
   
@@ -199,7 +191,7 @@ const ManageListingsPage: React.FC = () => {
   return (
     <div className="container mx-auto px-4 py-8 max-w-7xl">
       <div className="mb-4">
-        <BackToDashboardButton />
+        <BackToDashboardButton customReturnPath="/seller/dashboard" buttonText="Back to Seller Dashboard" />
       </div>
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-3xl font-bold text-gray-900">Manage Listings</h1>

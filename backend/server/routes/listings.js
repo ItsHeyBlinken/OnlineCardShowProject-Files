@@ -70,11 +70,153 @@ router.get('/seller/:sellerId', auth, async (req, res) => {
 router.get('/store/:storeId', async (req, res) => {
     try {
         const storeId = req.params.storeId;
-        const result = await pool.query(
-            'SELECT l.*, u.username as seller_name FROM listings l JOIN users u ON l.seller_id = u.id WHERE l.seller_id = $1 AND l.active = true ORDER BY l.created_at DESC',
-            [storeId]
-        );
-        res.json(result.rows);
+        const { 
+            category, 
+            condition, 
+            minPrice, 
+            maxPrice, 
+            sortBy, 
+            search,
+            limit = 50,
+            offset = 0
+        } = req.query;
+
+        // Start building the query
+        let query = `
+            SELECT l.*, u.username as seller_name 
+            FROM listings l 
+            JOIN users u ON l.seller_id = u.id 
+            WHERE l.seller_id = $1 AND l.active = true
+        `;
+        
+        // Parameters array for prepared statement
+        const params = [storeId];
+        let paramCounter = 2;
+        
+        // Add category filter
+        if (category) {
+            query += ` AND l.category = $${paramCounter}`;
+            params.push(category);
+            paramCounter++;
+        }
+        
+        // Add condition filter
+        if (condition) {
+            query += ` AND l.condition = $${paramCounter}`;
+            params.push(condition);
+            paramCounter++;
+        }
+        
+        // Add price range filter
+        if (minPrice) {
+            query += ` AND l.price >= $${paramCounter}`;
+            params.push(parseFloat(minPrice));
+            paramCounter++;
+        }
+        
+        if (maxPrice) {
+            query += ` AND l.price <= $${paramCounter}`;
+            params.push(parseFloat(maxPrice));
+            paramCounter++;
+        }
+        
+        // Add search filter
+        if (search) {
+            query += ` AND (
+                l.title ILIKE $${paramCounter} OR 
+                l.description ILIKE $${paramCounter} OR
+                l.player_name ILIKE $${paramCounter} OR
+                l.brand ILIKE $${paramCounter}
+            )`;
+            params.push(`%${search}%`);
+            paramCounter++;
+        }
+        
+        // Add sorting
+        if (sortBy) {
+            switch (sortBy) {
+                case 'priceAsc':
+                    query += ` ORDER BY l.price ASC`;
+                    break;
+                case 'priceDesc':
+                    query += ` ORDER BY l.price DESC`;
+                    break;
+                case 'newest':
+                    query += ` ORDER BY l.created_at DESC`;
+                    break;
+                case 'oldest':
+                    query += ` ORDER BY l.created_at ASC`;
+                    break;
+                default:
+                    query += ` ORDER BY l.created_at DESC`;
+            }
+        } else {
+            // Default sort by newest
+            query += ` ORDER BY l.created_at DESC`;
+        }
+        
+        // Add pagination
+        query += ` LIMIT $${paramCounter} OFFSET $${paramCounter + 1}`;
+        params.push(parseInt(limit));
+        params.push(parseInt(offset));
+        
+        // Execute the query
+        const result = await pool.query(query, params);
+        
+        // Get total count for pagination
+        let countQuery = `
+            SELECT COUNT(*) FROM listings l 
+            WHERE l.seller_id = $1 AND l.active = true
+        `;
+        
+        // Add the same filters to count query
+        let countParams = [storeId];
+        paramCounter = 2;
+        
+        if (category) {
+            countQuery += ` AND l.category = $${paramCounter}`;
+            countParams.push(category);
+            paramCounter++;
+        }
+        
+        if (condition) {
+            countQuery += ` AND l.condition = $${paramCounter}`;
+            countParams.push(condition);
+            paramCounter++;
+        }
+        
+        if (minPrice) {
+            countQuery += ` AND l.price >= $${paramCounter}`;
+            countParams.push(parseFloat(minPrice));
+            paramCounter++;
+        }
+        
+        if (maxPrice) {
+            countQuery += ` AND l.price <= $${paramCounter}`;
+            countParams.push(parseFloat(maxPrice));
+            paramCounter++;
+        }
+        
+        if (search) {
+            countQuery += ` AND (
+                l.title ILIKE $${paramCounter} OR 
+                l.description ILIKE $${paramCounter} OR
+                l.player_name ILIKE $${paramCounter} OR
+                l.brand ILIKE $${paramCounter}
+            )`;
+            countParams.push(`%${search}%`);
+            paramCounter++;
+        }
+        
+        const countResult = await pool.query(countQuery, countParams);
+        const totalCount = parseInt(countResult.rows[0].count);
+        
+        res.json({
+            listings: result.rows,
+            totalCount,
+            page: Math.floor(offset / limit) + 1,
+            totalPages: Math.ceil(totalCount / limit)
+        });
     } catch (error) {
         console.error('Error fetching store listings:', error);
         res.status(500).json({ message: 'Server error' });

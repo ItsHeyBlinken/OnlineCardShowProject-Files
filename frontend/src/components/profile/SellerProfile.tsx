@@ -1,33 +1,37 @@
-import React from 'react'
-import { Store, Image, DollarSign, Package, BarChart } from 'lucide-react'
-import { Button } from '../../components/ui/Button' // Corrected import path
-import { Input } from '../../components/ui/Input'  //corrected import path
-import axios from 'axios'
+import React from 'react';
+import { Store, Image, DollarSign, Package, BarChart } from 'lucide-react';
+import { Button } from '../ui/Button';
+import { Input } from '../ui/Input';
+import axios from 'axios';
+import { ImageWithFallback } from '../common/ImageWithFallback';
+import { handleApiError } from '../../utils/errorHandler';
+import { useStoreCustomization } from '../../hooks/useStoreCustomization';
 
 interface SellerProfileProps {
-  profile: any
-  store: any
+  profile: any;
+  store: any;
   onUpdateStore: (data: Partial<any>) => Promise<void>;
 }
 
 export const SellerProfile: React.FC<SellerProfileProps> = ({ profile, store, onUpdateStore }) => {
-  const [isEditing, setIsEditing] = React.useState(false)
+  const [isEditing, setIsEditing] = React.useState(false);
+  const { customization, updateCustomization, error } = useStoreCustomization(store.id);
   const [formData, setFormData] = React.useState({
     name: store.name || '',
     description: store.description || '',
     logo_url: store.logo_url || '',
     banner_url: store.banner_url || '',
-  })
+  });
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
     try {
-      await axios.put(`/api/stores/${store.id}`, formData)
-      setIsEditing(false)
+      await updateCustomization(formData);
+      setIsEditing(false);
     } catch (error) {
-      console.error('Error updating store:', error)
+      console.error('Error updating store:', handleApiError(error));
     }
-  }
+  };
 
   // Mock data for dashboard stats
   const stats = {

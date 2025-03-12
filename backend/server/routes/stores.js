@@ -72,4 +72,76 @@ router.get('/dashboard/listings', auth, async (req, res) => {
     }
 });
 
+// Get store customization
+router.get('/:storeId', async (req, res) => {
+    try {
+        const { storeId } = req.params;
+        console.log('Getting store customization for store:', storeId);
+
+        // Check if store exists
+        const storeResult = await pool.query(
+            'SELECT * FROM stores WHERE id = $1',
+            [storeId]
+        );
+
+        if (storeResult.rows.length === 0) {
+            return res.status(404).json({ message: 'Store not found' });
+        }
+
+        // Get customization
+        const customizationResult = await pool.query(
+            'SELECT customization FROM stores WHERE id = $1',
+            [storeId]
+        );
+
+        const store = storeResult.rows[0];
+        const customization = customizationResult.rows[0]?.customization || {};
+
+        res.json({
+            store,
+            customization
+        });
+
+    } catch (error) {
+        console.error('Error fetching store customization:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+// Update store customization
+router.put('/:storeId', auth, async (req, res) => {
+    try {
+        const { storeId } = req.params;
+        const { customization } = req.body;
+        const userId = req.user.id;
+
+        console.log('Updating store customization for store:', storeId);
+
+        // Check if user owns the store
+        const storeResult = await pool.query(
+            'SELECT * FROM stores WHERE id = $1 AND user_id = $2',
+            [storeId, userId]
+        );
+
+        if (storeResult.rows.length === 0) {
+            return res.status(403).json({ message: 'Unauthorized' });
+        }
+
+        // Update customization
+        const updateResult = await pool.query(
+            'UPDATE stores SET customization = $1 WHERE id = $2 RETURNING *',
+            [customization, storeId]
+        );
+
+        res.json({
+            store: updateResult.rows[0],
+            customization
+        });
+
+    } catch (error) {
+        console.error('Error updating store customization:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
 module.exports = router; 

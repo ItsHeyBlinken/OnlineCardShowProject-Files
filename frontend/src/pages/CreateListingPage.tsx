@@ -222,11 +222,12 @@ const CreateListingPage = () => {
                                 required
                             >
                                 <option value="">Select condition</option>
-                                <option value="new">New</option>
-                                <option value="like-new">Like New</option>
-                                <option value="excellent">Excellent</option>
-                                <option value="good">Good</option>
-                                <option value="fair">Fair</option>
+                                <option value="Mint">Mint</option>
+                                <option value="Near Mint">Near Mint</option>
+                                <option value="Excellent">Excellent</option>
+                                <option value="Good">Good</option>
+                                <option value="Fair">Fair</option>
+                                <option value="Poor">Poor</option>
                             </select>
                         </div>
 
@@ -242,11 +243,12 @@ const CreateListingPage = () => {
                                 required
                             >
                                 <option value="">Select category</option>
-                                <option value="sports">Sports Cards</option>
-                                <option value="pokemon">Pokemon Cards</option>
-                                <option value="yugioh">Yu-Gi-Oh Cards</option>
-                                <option value="magic">Magic: The Gathering</option>
-                                <option value="other">Other</option>
+                                <option value="Baseball">Baseball</option>
+                                <option value="Basketball">Basketball</option>
+                                <option value="Football">Football</option>
+                                <option value="Hockey">Hockey</option>
+                                <option value="Soccer">Soccer</option>
+                                <option value="Other">Other</option>
                             </select>
                         </div>
 

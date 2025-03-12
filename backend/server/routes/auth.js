@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/auth');
 const { loginUser, logoutUser, getCurrentUser, becomeSeller } = require('../controllers/authController');
+const { googleLogin, facebookLogin, twitterLogin } = require('../controllers/socialAuthController');
 const pool = require('../db');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
@@ -471,5 +472,10 @@ router.get('/check-image', auth, async (req, res) => {
     res.status(500).json({ message: 'Error checking user image', error: error.message });
   }
 });
+
+// Social login routes
+router.post('/google-login', googleLogin);
+router.post('/facebook-login', facebookLogin);
+router.post('/twitter-login', twitterLogin);
 
 module.exports = router;

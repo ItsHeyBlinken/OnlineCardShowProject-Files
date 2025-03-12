@@ -8,14 +8,7 @@ import ShippingAddressForm from '../components/profile/ShippingAddressForm';
 const defaultImage = '/images/logo1.jpg';
 
 export const ProfilePage = () => {
-  const { user, loading, checkAuth, login } = useAuth();
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
-  const [showSellerForm, setShowSellerForm] = useState(false);
-  const [sellerFormData, setSellerFormData] = useState({
-    businessName: user?.name || '',
-    description: ''
-  });
+  const { user, loading } = useAuth();
   const [preferences, setPreferences] = useState({
     favoriteSport: user?.favoriteSport || '',
     favoriteTeam: user?.favoriteTeam || '',
@@ -79,67 +72,6 @@ export const ProfilePage = () => {
       setUnreadMessages(response.data.count);
     } catch (error) {
       console.error('Error fetching unread message count:', error);
-    }
-  };
-
-  const handleSellerFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setSellerFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  };
-
-  const handleBecomeSeller = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-        setError('');
-        setSuccess('');
-        
-        const token = localStorage.getItem('token');
-        if (!token) {
-            setError('You must be logged in to become a seller.');
-            return;
-        }
-
-        const response = await axios.post(
-            '/api/auth/become-seller', 
-            {
-                ...sellerFormData,
-                userId: user?.id
-            },
-            {
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                }
-            }
-        );
-
-        console.log('Seller registration response:', response.data);
-        
-        if (response.data.user) {
-            console.log('Updated user data:', response.data.user);
-            // Assuming login function requires two arguments: user and token
-            await login(response.data.user, token);
-            
-            // Force a refresh of the auth context
-            await checkAuth();
-            setSuccess('Successfully became a seller!');
-            setShowSellerForm(false);
-            
-            // Force a page refresh after a short delay
-            setTimeout(() => {
-                window.location.reload();
-            }, 1000);
-        }
-    } catch (error: any) {
-        console.error('Error during seller registration:', error.response || error);
-        if (error.response?.status === 401) {
-            setError('Your session has expired. Please log in again.');
-        } else {
-            setError(error.response?.data?.message || 'Error becoming a seller. Please try again.');
-        }
     }
   };
 
@@ -239,17 +171,39 @@ export const ProfilePage = () => {
             </div>
           </div>
 
-          {/* Add Seller Dashboard Button for sellers */}
-          {user?.role === 'seller' && (
-            <div className="mt-6">
+          {/* Action Buttons Section */}
+          <div className="mt-6 flex flex-wrap gap-4">
+            {/* Messages Button - Moved to top and styled like other buttons */}
+            <Link 
+              to="/inbox" 
+              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+            >
+              Messages
+              {unreadMessages > 0 && (
+                <span className="ml-2 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-red-600 rounded-full">
+                  {unreadMessages > 9 ? '9+' : unreadMessages}
+                </span>
+              )}
+            </Link>
+
+            {/* Order History Button */}
+            <Link 
+              to="/order-history"
+              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+            >
+              View Order History
+            </Link>
+
+            {/* Add Seller Dashboard Button for sellers */}
+            {user?.role === 'seller' && (
               <Link 
                 to="/seller/dashboard" 
                 className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
               >
                 Go to Seller Dashboard
               </Link>
-            </div>
-          )}
+            )}
+          </div>
 
           {user.role === 'buyer' && (
             <div className="mt-8 bg-white shadow sm:rounded-lg">
@@ -261,67 +215,14 @@ export const ProfilePage = () => {
                   <p>Upgrade your account to start selling cards on our platform.</p>
                 </div>
                 
-                {!showSellerForm ? (
-                  <div className="mt-5">
-                    <button
-                      type="button"
-                      onClick={() => setShowSellerForm(true)}
-                      className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                    >
-                      Start Seller Application
-                    </button>
-                  </div>
-                ) : (
-                  <form onSubmit={handleBecomeSeller} className="mt-5 space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">Business Name</label>
-                      <input
-                        type="text"
-                        name="businessName"
-                        value={sellerFormData.businessName}
-                        onChange={handleSellerFormChange}
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                        required
-                      />
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">Description</label>
-                      <textarea
-                        name="description"
-                        value={sellerFormData.description}
-                        onChange={handleSellerFormChange}
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                        rows={3}
-                        placeholder="Tell us about your business and what you plan to sell..."
-                        required
-                      />
-                    </div>
-
-                    <div className="flex space-x-4">
-                      <button
-                        type="submit"
-                        className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                      >
-                        Submit Application
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setShowSellerForm(false)}
-                        className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  </form>
-                )}
-                
-                {error && (
-                  <p className="mt-2 text-sm text-red-600">{error}</p>
-                )}
-                {success && (
-                  <p className="mt-2 text-sm text-green-600">{success}</p>
-                )}
+                <div className="mt-5">
+                  <Link
+                    to="/become-seller"
+                    className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                  >
+                    Start Seller Application
+                  </Link>
+                </div>
               </div>
             </div>
           )}
@@ -369,47 +270,9 @@ export const ProfilePage = () => {
             </div>
           </div>
 
-          {/* Order History Button */}
-          <div className="mt-5">
-            <Link to="/order-history">
-              <button className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                View Order History
-              </button>
-            </Link>
-          </div>
-
           {/* Shipping Address Section */}
           <div className="mt-8">
             <ShippingAddressForm />
-          </div>
-        </div>
-
-        {/* Navigation Section */}
-        <div className="mt-6 bg-white shadow rounded-lg">
-          <div className="px-4 py-5 sm:p-6">
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {/* Existing navigation items */}
-
-              {/* Messages Link */}
-              <Link
-                to="/inbox"
-                className="block p-4 border border-gray-200 rounded-lg hover:border-indigo-500 transition-colors"
-              >
-                <h3 className="text-lg font-medium text-gray-900">
-                  Messages
-                  {unreadMessages > 0 && (
-                    <span className="ml-2 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-red-600 rounded-full">
-                      {unreadMessages > 9 ? '9+' : unreadMessages}
-                    </span>
-                  )}
-                </h3>
-                <p className="mt-2 text-sm text-gray-500">
-                  {unreadMessages > 0 
-                    ? `You have ${unreadMessages} unread message${unreadMessages > 1 ? 's' : ''}`
-                    : 'View your conversations with buyers and sellers'}
-                </p>
-              </Link>
-            </div>
           </div>
         </div>
       </div>

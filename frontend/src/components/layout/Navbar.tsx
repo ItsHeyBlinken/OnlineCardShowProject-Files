@@ -39,9 +39,37 @@ const Navbar = () => {
                             Online Card Show
                         </Link>
                         <div className="ml-10 flex items-center space-x-4">
-                            <Link to="/listings" className="text-gray-700 hover:text-gray-900">
-                                Browse Cards
-                            </Link>
+                            <div className="relative group">
+                                <Link to="/listings" className="text-gray-700 hover:text-gray-900 flex items-center">
+                                    Browse Cards
+                                    <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                    </svg>
+                                </Link>
+                                <div className="absolute left-0 mt-2 py-2 w-48 bg-white rounded-md shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-50">
+                                    <Link to="/listings" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                        All Cards
+                                    </Link>
+                                    <Link to="/listings?category=Baseball" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                        Baseball
+                                    </Link>
+                                    <Link to="/listings?category=Basketball" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                        Basketball
+                                    </Link>
+                                    <Link to="/listings?category=Football" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                        Football
+                                    </Link>
+                                    <Link to="/listings?category=Hockey" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                        Hockey
+                                    </Link>
+                                    <Link to="/listings?category=Soccer" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                        Soccer
+                                    </Link>
+                                    <Link to="/listings?category=Other" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                        Other
+                                    </Link>
+                                </div>
+                            </div>
                             <Link to="/subscription-tiers" className="text-gray-700 hover:text-gray-900">
                                 Pricing
                             </Link>
@@ -56,11 +84,6 @@ const Navbar = () => {
                                         value={searchQuery}
                                         onChange={handleSearchChange}
                                     />
-                                    <button type="submit" className="absolute right-0 top-0 mt-1 mr-2">
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                                        </svg>
-                                    </button>
                                 </div>
                             </form>
                         </div>
@@ -127,12 +150,6 @@ const Navbar = () => {
                                 </div>
                             ) : (
                                 <div className="flex space-x-4">
-                                    <Link
-                                        to="/signup/buyer"
-                                        className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700"
-                                    >
-                                        Sign Up
-                                    </Link>
                                     <Link
                                         to="/login"
                                         className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700"

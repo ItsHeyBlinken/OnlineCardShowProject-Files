@@ -8,7 +8,7 @@ interface Message {
     id: number;
     sender_id: number;
     receiver_id: number;
-    listing_id: number;
+    listing_id: number | null;
     content: string;
     timestamp: string;
     is_read: boolean;
@@ -62,13 +62,13 @@ const InboxPage: React.FC = () => {
             const conversationMap = new Map<string, Conversation>();
 
             allMessages.forEach(message => {
-                const isCurrentUserSender = message.sender_id === user.id;
+                const isCurrentUserSender = message.sender_id === Number(user.id);
                 const conversationUserId = isCurrentUserSender ? message.receiver_id : message.sender_id;
                 const username = isCurrentUserSender ? message.receiver_name : message.sender_name;
                 const key = `${conversationUserId}-${message.listing_id || 0}`;
 
                 // Calculate if this is an unread message for current user
-                const isUnread = !message.is_read && message.receiver_id === user.id;
+                const isUnread = !message.is_read && message.receiver_id === Number(user.id);
 
                 if (!conversationMap.has(key)) {
                     // Create new conversation entry
@@ -131,7 +131,7 @@ const InboxPage: React.FC = () => {
             const params = new URLSearchParams(location.search);
             if (params.get('new') === 'true') {
                 const receiverId = Number(params.get('receiverId'));
-                const listingId = Number(params.get('listingId'));
+                const listingId = params.get('listingId') ? Number(params.get('listingId')) : null;
                 const receiverName = params.get('receiverName') || 'Seller';
                 const listingTitle = params.get('listingTitle') || '';
                 
@@ -140,8 +140,8 @@ const InboxPage: React.FC = () => {
                     const tempConversation: Conversation = {
                         userId: receiverId,
                         username: receiverName,
-                        listingId: listingId || null,
-                        listingTitle: listingTitle || null,
+                        listingId: listingId,
+                        listingTitle: listingTitle,
                         lastMessage: {} as Message, // Empty placeholder
                         unreadCount: 0
                     };
@@ -171,8 +171,8 @@ const InboxPage: React.FC = () => {
             // Filter messages for this conversation
             const conversationMessages = allMessages.filter(message => {
                 const isWithSelectedUser = 
-                    (message.sender_id === user.id && message.receiver_id === userId) || 
-                    (message.receiver_id === user.id && message.sender_id === userId);
+                    (message.sender_id === Number(user.id) && message.receiver_id === userId) || 
+                    (message.receiver_id === Number(user.id) && message.sender_id === userId);
                 
                 // If listingId is provided, also filter by listing
                 const isForSelectedListing = listingId ? message.listing_id === listingId : true;
@@ -189,7 +189,7 @@ const InboxPage: React.FC = () => {
             
             // Mark unread messages as read
             const unreadMessages = sortedMessages.filter(
-                message => !message.is_read && message.receiver_id === user.id
+                message => !message.is_read && message.receiver_id === Number(user.id)
             );
             
             for (const message of unreadMessages) {
@@ -289,7 +289,7 @@ const InboxPage: React.FC = () => {
     return (
         <div className="container mx-auto px-4 py-8 max-w-6xl">
             <div className="mb-4">
-                <BackToDashboardButton />
+                <BackToDashboardButton customReturnPath="/profile" buttonText="Back to Profile" />
             </div>
             <h1 className="text-3xl font-bold mb-6">Messages</h1>
             
@@ -415,18 +415,18 @@ const InboxPage: React.FC = () => {
                                         messages.map((message) => (
                                             <div 
                                                 key={message.id} 
-                                                className={`flex ${message.sender_id === user?.id ? 'justify-end' : 'justify-start'}`}
+                                                className={`flex ${message.sender_id === Number(user?.id) ? 'justify-end' : 'justify-start'}`}
                                             >
                                                 <div 
                                                     className={`max-w-[70%] rounded-lg p-3 ${
-                                                        message.sender_id === user?.id 
+                                                        message.sender_id === Number(user?.id) 
                                                             ? 'bg-blue-500 text-white' 
                                                             : 'bg-gray-100 text-gray-800'
                                                     }`}
                                                 >
                                                     <p>{message.content}</p>
                                                     <p className={`text-xs mt-1 text-right ${
-                                                        message.sender_id === user?.id 
+                                                        message.sender_id === Number(user?.id) 
                                                             ? 'text-blue-100' 
                                                             : 'text-gray-500'
                                                     }`}>
