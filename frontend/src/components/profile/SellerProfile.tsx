@@ -2,8 +2,6 @@ import React from 'react';
 import { Store, Image, DollarSign, Package, BarChart } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
-import axios from 'axios';
-import { ImageWithFallback } from '../common/ImageWithFallback';
 import { handleApiError } from '../../utils/errorHandler';
 import { useStoreCustomization } from '../../hooks/useStoreCustomization';
 
@@ -13,9 +11,9 @@ interface SellerProfileProps {
   onUpdateStore: (data: Partial<any>) => Promise<void>;
 }
 
-export const SellerProfile: React.FC<SellerProfileProps> = ({ profile, store, onUpdateStore }) => {
+export const SellerProfile: React.FC<SellerProfileProps> = ({ store }) => {
   const [isEditing, setIsEditing] = React.useState(false);
-  const { customization, updateCustomization, error } = useStoreCustomization(store.id);
+  const { updateCustomization } = useStoreCustomization(store.id);
   const [formData, setFormData] = React.useState({
     name: store.name || '',
     description: store.description || '',
@@ -26,7 +24,11 @@ export const SellerProfile: React.FC<SellerProfileProps> = ({ profile, store, on
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await updateCustomization(formData);
+      await updateCustomization({
+        storeLogo: formData.logo_url,
+        bannerImage: formData.banner_url,
+        // Map other relevant fields if needed
+      });
       setIsEditing(false);
     } catch (error) {
       console.error('Error updating store:', handleApiError(error));

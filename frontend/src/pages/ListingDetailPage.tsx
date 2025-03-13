@@ -94,7 +94,7 @@ const ListingDetailPage: React.FC = () => {
       return;
     }
 
-    if (user.id === listing?.seller_id) {
+    if (parseInt(user.id) === listing?.seller_id) {
       // Prevent messaging yourself
       alert("You can't message yourself as the seller");
       return;
