@@ -2,21 +2,16 @@ const pool = require('../db');
 
 // Get seller dashboard statistics
 const getDashboardStats = async (req, res) => {
-    console.log('Getting dashboard stats for seller:', req.user.id);
     try {
         const sellerId = req.user.id;
 
-        // Get active listings count
         const listingsResult = await pool.query(
-            'SELECT COUNT(*) as active_listings FROM listings WHERE seller_id = $1',
+            'SELECT COUNT(*) FROM listings WHERE seller_id = $1',
             [sellerId]
         );
-        console.log('Listings result:', listingsResult.rows[0]);
 
-        // Get total sales and monthly revenue
         const salesResult = await pool.query(`
             SELECT 
-                COUNT(*) as total_orders,
                 SUM(o.price_at_purchase) as total_sales,
                 SUM(CASE 
                     WHEN o.created_at >= NOW() - INTERVAL '30 days' 
@@ -29,17 +24,12 @@ const getDashboardStats = async (req, res) => {
             [sellerId]
         );
 
-        // Get pending orders count
-        const pendingOrdersResult = await pool.query(`
-            SELECT COUNT(*) as pending_orders 
-            FROM orders o
-            JOIN listings l ON o.listing_id = l.id
-            WHERE l.seller_id = $1 AND o.status = 'pending'`,
+        const pendingOrdersResult = await pool.query(`SELECT COUNT(*) as pending_orders FROM orders o JOIN listings l ON o.listing_id = l.id WHERE l.seller_id = $1 AND o.status = 'pending'`,
             [sellerId]
         );
 
         res.json({
-            activeListings: parseInt(listingsResult.rows[0].active_listings),
+            activeListings: parseInt(listingsResult.rows[0].count),
             totalSales: parseFloat(salesResult.rows[0].total_sales || 0),
             monthlyRevenue: parseFloat(salesResult.rows[0].monthly_revenue || 0),
             pendingOrders: parseInt(pendingOrdersResult.rows[0].pending_orders)
