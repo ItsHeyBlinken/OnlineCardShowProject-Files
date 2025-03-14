@@ -3,12 +3,12 @@ const router = express.Router();
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const pool = require('../db');
 
-// Raw body middleware for Stripe webhook
+// Raw body middleware for Stripe webhook (for handling raw JSON body)
 const stripeWebhookMiddleware = express.raw({ type: 'application/json' });
 
-// Create a special middleware for webhook routes
+// Create a special middleware for webhook routes (for handling raw JSON body)
 const webhookMiddleware = (req, res, next) => {
-  // Get raw body for Stripe signature verification
+  // Get raw body for Stripe signature verification (for handling raw JSON body)
   const chunks = [];
   
   req.on('data', (chunk) => chunks.push(chunk));
@@ -21,14 +21,14 @@ const webhookMiddleware = (req, res, next) => {
   });
 };
 
-// Webhook route with raw body handling
-router.post('/stripe', stripeWebhookMiddleware, async (req, res) => {
+// Webhook route with raw body handling (for handling raw JSON body)
+router.post('/stripe', webhookMiddleware, stripeWebhookMiddleware, async (req, res) => {
   try {
     const sig = req.headers['stripe-signature'];
     const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
     let event;
-    
-    // Verify Stripe signature if in production or if webhook secret exists
+      
+    // Verify Stripe signature if in production or if webhook secret exists (for handling raw JSON body)
     if ((process.env.NODE_ENV === 'production' || webhookSecret) && sig) {
       try {
         event = stripe.webhooks.constructEvent(
@@ -42,9 +42,8 @@ router.post('/stripe', stripeWebhookMiddleware, async (req, res) => {
         return res.status(400).send(`Webhook Error: ${err.message}`);
       }
     } else {
-      // For development without signature (or direct testing)
+      // For development without signature (or direct testing)          
       try {
-        // Parse the raw body
         const rawBody = req.rawBody ? req.rawBody.toString('utf8') : '';
         event = rawBody ? JSON.parse(rawBody) : req.body;
         console.log('Webhook received in development mode (no signature verification)');
@@ -56,7 +55,7 @@ router.post('/stripe', stripeWebhookMiddleware, async (req, res) => {
     
     console.log(`Processing webhook event: ${event.type}`);
     
-    // Handle different event types
+    // Handle different event types (for handling raw JSON body)
     switch (event.type) {
       case 'checkout.session.completed': {
         const session = event.data.object;
@@ -81,7 +80,7 @@ router.post('/stripe', stripeWebhookMiddleware, async (req, res) => {
       }
     }
     
-    // Return a 200 response to acknowledge receipt of the event
+    // Return a 200 response to acknowledge receipt of the event (for handling raw JSON body)
     res.status(200).json({received: true});
   } catch (error) {
     console.error('Error processing webhook:', error);
@@ -89,7 +88,7 @@ router.post('/stripe', stripeWebhookMiddleware, async (req, res) => {
   }
 });
 
-// Add the functions for handling different webhook events
+// Add the functions for handling different webhook events (for handling raw JSON body)
 async function handleCheckoutComplete(session) {
   try {
     console.log('Handling checkout.session.completed:', session.id);
