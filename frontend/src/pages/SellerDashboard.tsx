@@ -39,22 +39,6 @@ const SellerDashboard = () => {
         }
     }, [user?.image_url]);
 
-    // Check for URL parameters related to Stripe Connect
-    useEffect(() => {
-        const urlParams = new URLSearchParams(window.location.search);
-        if (urlParams.get('setup') === 'success') {
-            // Show success toast or notification
-            alert('Your Stripe account has been connected successfully!');
-            // Remove the query parameters from the URL
-            history.replace('/seller/dashboard');
-        } else if (urlParams.get('error') === 'stripe_connect_failed') {
-            // Show error toast or notification
-            alert('There was an error connecting your Stripe account. Please try again.');
-            // Remove the query parameters from the URL
-            history.replace('/seller/dashboard');
-        }
-    }, [history]);
-
     const getMaxListings = (tier: string) => {
         switch (tier) {
             case 'Basic': return 75;
@@ -65,86 +49,88 @@ const SellerDashboard = () => {
         }
     };
 
-    const fetchDashboardStats = useCallback(async () => {
+    const fetchDashboardStats = useCallback(async (forceRefresh = false) => {
         try {
             setLoading(true);
             const token = localStorage.getItem('token');
-            
-            console.log('Making request to:', '/api/stores/dashboard'); // Updated URL
-            console.log('Token:', token ? 'exists' : 'missing');
             
             if (!token) {
                 throw new Error('No authentication token found');
             }
 
-            // Updated endpoint to match your backend
-            const response = await axios.get('/api/stores/dashboard', {
+            // Add cache-busting query parameter when force refreshing
+            const cacheBuster = forceRefresh ? `?_=${new Date().getTime()}` : '';
+
+            const response = await axios.get(`/api/stores/dashboard${cacheBuster}`, {
                 headers: { 
                     'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json'
                 }
             });
 
-            // Also fetch listings
-            const listingsResponse = await axios.get('/api/stores/dashboard/listings', {
-                headers: { 
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                }
-            });
-
-            console.log('Dashboard Response:', response.data);
-            console.log('Listings Response:', listingsResponse.data);
-
-            const tier = response.data.subscriptionTier || 'Basic';
-            const maxListings = getMaxListings(tier);
-
-            setStats({
-                ...response.data,
-                activeListings: listingsResponse.data.length || 0,
-                subscriptionTier: tier,
-                maxListings,
-                stripeConnected: response.data.stripeConnected || false
-            });
+            // Update state with the fetched data
+            setStats(response.data);
             setError('');
-        } catch (err: any) {
-            console.error('Error details:', {
-                url: err.config?.url,
-                method: err.config?.method,
-                status: err.response?.status,
-                data: err.response?.data,
-                message: err.message
-            });
-            setError(err.response?.data?.message || 'Failed to load dashboard statistics');
+            setHasListings(response.data.activeListings > 0);
+        } catch (error) {
+            console.error('Error fetching dashboard stats:', error);
+            setError('Failed to fetch dashboard stats');
         } finally {
             setLoading(false);
         }
     }, []);
+    
+    // Check for URL parameters related to Stripe Connect or subscription updates
+    useEffect(() => {
+        const urlParams = new URLSearchParams(window.location.search);
+        console.log('Dashboard URL parameters:', Object.fromEntries(urlParams.entries()));
+        
+        if (urlParams.get('setup') === 'success') {
+            // Show success toast or notification
+            alert('Your Stripe account has been connected successfully!');
+            // Remove the query parameters from the URL
+            history.replace('/seller/dashboard');
+        } else if (urlParams.get('error') === 'stripe_connect_failed') {
+            // Show error toast or notification
+            alert('There was an error connecting your Stripe account. Please try again.');
+            // Remove the query parameters from the URL
+            history.replace('/seller/dashboard');
+        } else if (urlParams.get('subscription_updated') === 'true') {
+            console.log('Detected subscription_updated parameter - forcing dashboard refresh');
+            // Show a notification about subscription update
+            alert('Your subscription has been updated! Your dashboard now reflects your new subscription tier.');
+            // Force refresh data when redirected from subscription management
+            fetchDashboardStats(true);
+            // Remove the query parameters from the URL
+            history.replace('/seller/dashboard');
+        }
+    }, [history, fetchDashboardStats]);
 
     useEffect(() => {
-        if (user) {
-            fetchDashboardStats();
-            checkListings();
-            fetchUnreadMessageCount();
-            
-            // Set up polling for message count updates
-            const intervalId = setInterval(fetchUnreadMessageCount, 60000); // Check every minute
-            
-            return () => clearInterval(intervalId);
-        }
-    }, [user, fetchDashboardStats]);
+        const fetchData = async () => {
+            try {
+                await fetchDashboardStats(); // Fetch stats
+                // Other data fetching logic
+            } catch (error) {
+                console.error('Error fetching data:', error);
+            }
+        };
 
-    const checkListings = async () => {
-        try {
-            const token = localStorage.getItem('token');
-            const response = await axios.get('/api/seller/listings', {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            setHasListings(response.data.length > 0);
-        } catch (error) {
-            console.error('Error checking listings:', error);
+        fetchData();
+    }, [fetchDashboardStats, user]); // Add dependencies as needed
+
+    useEffect(() => {
+        // If the user has a subscription tier in the user object,
+        // update the stats to match
+        if (user?.subscriptionTier && stats.subscriptionTier !== user.subscriptionTier) {
+            setStats(prevStats => ({
+                ...prevStats,
+                subscriptionTier: user.subscriptionTier ?? '',
+                maxListings: getMaxListings(user.subscriptionTier ?? '')
+            }));
         }
-    };
+    }, [user, stats.subscriptionTier]);
+
 
     const fetchUnreadMessageCount = async () => {
         try {
@@ -175,6 +161,28 @@ const SellerDashboard = () => {
         }
     };
 
+    const forceRefresh = useCallback(async () => {
+        try {
+            setLoading(true);
+            // Force fresh data with cache busting query parameter
+            await fetchDashboardStats(true);
+            setLoading(false);
+        } catch (error) {
+            console.error('Error refreshing dashboard:', error);
+            setLoading(false);
+        }
+    }, [fetchDashboardStats]);
+
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        if (params.get('refresh') === 'true') {
+            // Remove the parameter
+            window.history.replaceState({}, document.title, window.location.pathname);
+            // Force refresh
+            forceRefresh();
+        }
+    }, [forceRefresh]);
+
     if (loading) {
         return (
             <div className="min-h-screen flex items-center justify-center">
@@ -189,7 +197,7 @@ const SellerDashboard = () => {
                 <div className="text-red-600">
                     <p>Error: {error}</p>
                     <button 
-                        onClick={fetchDashboardStats}
+                        onClick={() => fetchDashboardStats(true)}
                         className="mt-4 px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700"
                     >
                         Retry
@@ -234,21 +242,10 @@ const SellerDashboard = () => {
                     </div>
                 </div>
 
-                {!hasListings && (
-                    <div className="text-center py-12 bg-white rounded-lg shadow">
-                        <h3 className="text-xl font-medium text-gray-900 mb-4">
-                            Welcome to your Seller Dashboard!
-                        </h3>
-                        <p className="text-gray-500 mb-6">
-                            Get started by creating your first listing
-                        </p>
-                        <button
-                            onClick={handleCreateListing}
-                            className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
-                        >
-                            Create Your First Listing
-                        </button>
-                    </div>
+                {hasListings ? (
+                    <p>You have listings available.</p>
+                ) : (
+                    <button onClick={handleCreateListing}>Create Your First Listing</button>
                 )}
 
                 {/* Stats Overview */}
@@ -493,8 +490,6 @@ const SellerDashboard = () => {
                         </Link>
                     </div>
                 )}
-
-                {/* This section has been removed as per instructions */}
 
                 {/* User Profile Section - Moved below the action buttons */}
                 <div className="mt-8">

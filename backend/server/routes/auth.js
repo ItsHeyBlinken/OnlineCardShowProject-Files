@@ -92,7 +92,7 @@ router.get('/user', auth, async (req, res) => {
         }
 
         const userResult = await pool.query(
-            'SELECT id, name, username, email, role, created_at, image_url, favorite_sport, favorite_team, favorite_players FROM users WHERE id = $1',
+            'SELECT id, name, username, email, role, created_at, image_url, favorite_sport, favorite_team, favorite_players, subscription_tier, subscription_id FROM users WHERE id = $1',
             [req.user.id]
         );
         
@@ -104,9 +104,22 @@ router.get('/user', auth, async (req, res) => {
         // Log the image URL for debugging
         console.log('GET /user endpoint - User image URL:', user.image_url);
 
-        res.json(user);
+        res.json({
+            id: user.id,
+            email: user.email,
+            username: user.username,
+            subscriptionTier: user.subscription_tier,
+            subscription_id: user.subscription_id,
+            name: user.name,
+            role: user.role,
+            created_at: user.created_at,
+            image_url: user.image_url,
+            favorite_sport: user.favorite_sport,
+            favorite_team: user.favorite_team,
+            favorite_players: user.favorite_players
+        });
     } catch (error) {
-        console.error('Error getting current user:', error);
+        console.error('Error fetching user:', error);
         res.status(500).json({ message: 'Server error' });
     }
 });

@@ -149,6 +149,7 @@ const imageRoutes = require('./routes/images'); // Add the new image routes
 const paymentRoutes = require('./routes/payments'); // Add payment routes
 const shippingRoutes = require('./routes/shipping');
 const usersRoutes = require('./routes/users'); // Add users routes for shipping addresses
+const webhookRoutes = require('./routes/webhooks');
 
 // Middleware
 app.use(cors());
@@ -157,7 +158,10 @@ app.use(cors());
 // This ensures the webhook data is properly parsed as raw binary data
 app.use('/api/payments/webhook', express.raw({ type: 'application/json' }));
 
-// Regular JSON parsing for all other routes
+// Register the webhook routes - IMPORTANT: do this BEFORE express.json()
+app.use('/api/webhooks', webhookRoutes);
+
+// Then your regular middleware
 app.use(express.json());
 
 // Serve static files from the uploads directory

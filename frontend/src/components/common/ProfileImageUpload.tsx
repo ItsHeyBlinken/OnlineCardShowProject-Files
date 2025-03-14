@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '../../hooks/useAuth';
 
 interface ProfileImageUploadProps {
   currentImageUrl: string | null;
@@ -12,7 +11,6 @@ const ProfileImageUpload: React.FC<ProfileImageUploadProps> = ({
   onImageSelected,
   className = ''
 }) => {
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(currentImageUrl);
   const [error, setError] = useState<string | null>(null);
   
@@ -40,8 +38,7 @@ const ProfileImageUpload: React.FC<ProfileImageUploadProps> = ({
         return;
       }
       
-      // Set selected file and pass it to parent component
-      setSelectedFile(file);
+      // Pass file to parent component
       onImageSelected(file);
       
       // Create preview URL

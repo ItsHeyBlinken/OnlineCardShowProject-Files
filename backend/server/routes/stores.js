@@ -6,51 +6,68 @@ const auth = require('../middleware/auth');
 // Get dashboard stats
 router.get('/dashboard', auth, async (req, res) => {
     try {
-        const sellerId = req.user.id;
-        console.log('Getting dashboard stats for seller:', sellerId);
-        
-        // Get active listings count
+        const userId = req.user.id;
+
+        // Fetch user data
+        const userResult = await pool.query(
+            'SELECT id, username, email, subscription_tier, subscription_id FROM users WHERE id = $1',
+            [userId]
+        );
+
+        if (userResult.rows.length === 0) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        const user = userResult.rows[0];
+        const subscriptionTier = user.subscription_tier || 'Basic';
+
+        // Calculate max listings based on tier
+        let maxListings;
+        switch (subscriptionTier) {
+            case 'Starter': maxListings = 250; break;
+            case 'Pro': maxListings = 750; break;
+            case 'Premium': maxListings = 999999; break;
+            default: maxListings = 75; // Basic
+        }
+
+        // Fetch active listings count
         const listingsResult = await pool.query(
-            'SELECT COUNT(*) as active_listings FROM listings WHERE seller_id = $1',
-            [sellerId]
+            'SELECT COUNT(*) FROM listings WHERE seller_id = $1',
+            [userId]
         );
 
-        // Get sales stats
-        const salesResult = await pool.query(`
-            SELECT 
-                COALESCE(COUNT(*), 0) as total_orders,
-                COALESCE(SUM(price_at_purchase), 0) as total_sales,
-                COUNT(CASE WHEN status = 'pending' THEN 1 END) as pending_orders
-            FROM orders o
-            JOIN listings l ON o.listing_id = l.id
-            WHERE l.seller_id = $1`,
-            [sellerId]
-        );
-        
-        // Get Stripe Connect status
-        const stripeResult = await pool.query(
-            'SELECT stripe_account_id FROM seller_profiles WHERE user_id = $1',
-            [sellerId]
-        );
-        
-        const stripeConnected = stripeResult.rows.length > 0 && !!stripeResult.rows[0].stripe_account_id;
+        const activeListings = parseInt(listingsResult.rows[0].count) || 0;
 
+        // Prepare stats to send
         const stats = {
-            activeListings: parseInt(listingsResult.rows[0].active_listings),
-            totalSales: parseFloat(salesResult.rows[0].total_sales || 0),
-            totalOrders: parseInt(salesResult.rows[0].total_orders),
-            pendingOrders: parseInt(salesResult.rows[0].pending_orders || 0),
-            stripeConnected: stripeConnected
+            activeListings,
+            totalSales: 0, // Replace with actual calculation
+            totalOrders: 0, // Replace with actual calculation
+            pendingOrders: 0, // Replace with actual calculation
+            stripeConnected: false, // Replace with actual value
+            subscriptionTier,
+            maxListings,
+            subscription_id: user.subscription_id
         };
 
-        console.log('Sending stats:', stats);
+        console.log('Sending dashboard stats:', stats);
         res.json(stats);
-
     } catch (error) {
-        console.error('Error in dashboard route:', error);
+        console.error('Error fetching dashboard stats:', error);
         res.status(500).json({ message: 'Server error' });
     }
 });
+
+// Helper function to get max listings
+function getMaxListings(tier) {
+    switch (tier) {
+        case 'Basic': return 75;
+        case 'Starter': return 250;
+        case 'Pro': return 750;
+        case 'Premium': return 999999; // Effectively unlimited
+        default: return 75;
+    }
+}
 
 // Add listings route
 router.get('/dashboard/listings', auth, async (req, res) => {

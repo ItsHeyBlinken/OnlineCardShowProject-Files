@@ -1,4 +1,5 @@
-const { s3, getPublicUrl } = require('../config/s3Config');
+const { s3Client } = require('../config/s3Config');
+const { PutObjectCommand, DeleteObjectCommand } = require('@aws-sdk/client-s3');
 const { v4: uuidv4 } = require('uuid');
 
 /**
@@ -16,27 +17,28 @@ const uploadFileToS3 = async (fileBuffer, originalFilename, fileType, listingId,
     const fileExtension = originalFilename.split('.').pop();
     const key = `listings/${listingId}/image${index}_${uniqueId}.${fileExtension}`;
     
-    const params = {
+    const command = new PutObjectCommand({
         Bucket: process.env.AWS_S3_BUCKET_NAME,
         Key: key,
         Body: fileBuffer,
         ContentType: fileType
-        // ACL parameter removed - Use bucket policies instead for public access
-        // This avoids the "AccessControlListNotSupported" error when bucket has ACLs disabled
-    };
+    });
     
     try {
-        const uploadResult = await s3.upload(params).promise();
-        console.log('S3 upload successful:', uploadResult);
+        await s3Client.send(command);
+        console.log('S3 upload successful for key:', key);
         
         // Create a proxy URL to avoid CORS issues
         const proxyUrl = `/api/images/proxy/${key}`;
         
+        // Construct the S3 URL (for reference)
+        const s3Url = `https://${process.env.AWS_S3_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${key}`;
+        
         return {
             success: true,
             url: proxyUrl, // Use proxy URL instead of S3 URL
-            key: uploadResult.Key,
-            s3Url: uploadResult.Location // Keep the original S3 URL for reference
+            key: key,
+            s3Url: s3Url // Keep the original S3 URL for reference
         };
     } catch (error) {
         console.error('Error uploading to S3:', error);
@@ -53,13 +55,13 @@ const uploadFileToS3 = async (fileBuffer, originalFilename, fileType, listingId,
  * @returns {Promise<object>} - Object containing S3 delete result
  */
 const deleteFileFromS3 = async (key) => {
-    const params = {
+    const command = new DeleteObjectCommand({
         Bucket: process.env.AWS_S3_BUCKET_NAME,
         Key: key
-    };
+    });
     
     try {
-        await s3.deleteObject(params).promise();
+        await s3Client.send(command);
         return {
             success: true
         };

@@ -8,7 +8,8 @@ const multer = require('multer');
 const { processImage, validateImage } = require('../utils/imageProcessor');
 const { uploadFileToS3 } = require('../services/s3Service');
 const { v4: uuidv4 } = require('uuid');
-const { s3 } = require('../config/s3Config');
+const { s3Client } = require('../config/s3Config');
+const { GetObjectCommand } = require('@aws-sdk/client-s3');
 
 // Configure multer for profile image uploads using memory storage for S3
 const profileImageStorage = multer.memoryStorage();
@@ -124,22 +125,32 @@ router.get('/proxy/:key(*)', async (req, res) => {
     const key = req.params.key;
     console.log('Image proxy request for key:', key);
     
-    // Setup the S3 params
-    const params = {
+    // Setup the S3 command
+    const command = new GetObjectCommand({
       Bucket: process.env.AWS_S3_BUCKET_NAME,
       Key: key
-    };
+    });
     
-    // Get the object from S3
-    const s3Object = await s3.getObject(params).promise();
-    
-    // Set the appropriate content type
-    res.set('Content-Type', s3Object.ContentType);
-    res.set('Cache-Control', 'public, max-age=31536000'); // Cache for 1 year
-    res.set('Access-Control-Allow-Origin', '*'); // Allow from any origin
-    
-    // Send the image data
-    res.send(s3Object.Body);
+    try {
+      // Get the object from S3
+      const s3Object = await s3Client.send(command);
+      
+      // Set the appropriate content type
+      res.set('Content-Type', s3Object.ContentType);
+      res.set('Cache-Control', 'public, max-age=31536000'); // Cache for 1 year
+      res.set('Access-Control-Allow-Origin', '*'); // Allow from any origin
+      
+      // Convert the ReadableStream to Buffer and send
+      const chunks = [];
+      for await (const chunk of s3Object.Body) {
+        chunks.push(chunk);
+      }
+      const buffer = Buffer.concat(chunks);
+      res.send(buffer);
+    } catch (s3Error) {
+      console.error('S3 Error:', s3Error);
+      throw s3Error;
+    }
   } catch (error) {
     console.error('Error proxying image from S3:', error);
     console.log('Failed proxy request details:', {
@@ -149,7 +160,7 @@ router.get('/proxy/:key(*)', async (req, res) => {
     });
     
     // Return a default image or error response
-    res.status(404).send('Image not found');
+    res.redirect('/images/logo1.jpg');
   }
 });
 

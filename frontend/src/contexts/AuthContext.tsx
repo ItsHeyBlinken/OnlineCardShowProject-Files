@@ -19,6 +19,7 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
   checkAuth: () => Promise<void>;
+  forceRefreshUserData: () => Promise<User | null>;
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -37,6 +38,11 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }
       
       // Set axios default header
       axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      
+      // Check if image_url exists, if not, assign placeholder
+      if (userData && !userData.image_url) {
+        userData.image_url = '/images/logo1.jpg';
+      }
       
       setUser(userData);
       return userData;
@@ -63,8 +69,12 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }
         
         // Update the user state with the refreshed data
         if (response.data) {
-          // Add a timestamp to the image URL to prevent caching if it exists
-          if (response.data.image_url) {
+          // Check if image_url exists, if not, assign placeholder
+          if (!response.data.image_url) {
+            // Use the placeholder image when user has no image
+            response.data.image_url = '/images/logo1.jpg';
+          } else {
+            // Add a timestamp to the image URL to prevent caching if it exists
             response.data.image_url = `${response.data.image_url}?t=${new Date().getTime()}`;
           }
           setUser(response.data);
@@ -78,12 +88,40 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }
     }
   }, []);
 
+  const forceRefreshUserData = async () => {
+    try {
+      // Clear any cached user data
+      setUser(null);
+      
+      // Force a new API call with cache busting
+      const response = await fetch(`/api/auth/user?_=${new Date().getTime()}`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
+        },
+        credentials: 'include'
+      });
+      
+      if (response.ok) {
+        const userData = await response.json();
+        console.log('Refreshed user data:', userData);
+        setUser(userData);
+        return userData;
+      } else {
+        console.error('Failed to refresh user data');
+        return null;
+      }
+    } catch (error) {
+      console.error('Error refreshing user data:', error);
+      return null;
+    }
+  };
+
   useEffect(() => {
     checkAuth();
   }, [checkAuth]);
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout, checkAuth }}>
+    <AuthContext.Provider value={{ user, loading, login, logout, checkAuth, forceRefreshUserData }}>
       {children}
     </AuthContext.Provider>
   );

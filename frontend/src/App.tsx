@@ -126,6 +126,14 @@ const App = () => {
                     </ProtectedRoute>
                   )}
                 />
+                <Route
+                  path="/subscription-management"
+                  render={() => (
+                    <ProtectedRoute>
+                      <SubscriptionManagementPage />
+                    </ProtectedRoute>
+                  )}
+                />
                 <Route path="/inbox" component={InboxPage} />
                 <Route path="/search" component={SearchResultsPage} />
                 <Route path="/listing/:id" component={ListingDetailPage} />

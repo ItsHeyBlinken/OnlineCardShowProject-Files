@@ -301,7 +301,7 @@ const ListingsPage = () => {
                     <div className="border rounded-lg overflow-hidden bg-white shadow-sm hover:shadow-md transition-shadow">
                       <div className="h-48 overflow-hidden">
                         <img 
-                          src={listing.image_url || '/placeholder-image.jpg'} 
+                          src={listing.image_url || '/images/logo1.jpg'} 
                           alt={listing.title}
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" 
                         />
