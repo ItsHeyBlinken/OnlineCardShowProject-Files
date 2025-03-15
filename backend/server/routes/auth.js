@@ -92,7 +92,11 @@ router.get('/user', auth, async (req, res) => {
         }
 
         const userResult = await pool.query(
-            'SELECT id, name, username, email, role, created_at, image_url, favorite_sport, favorite_team, favorite_players, subscription_tier, subscription_id FROM users WHERE id = $1',
+            `SELECT id, name, username, email, role, created_at, image_url, 
+                   favorite_sport, favorite_team, favorite_players, 
+                   subscription_tier, subscription_id, subscription_status, 
+                   stripe_subscription_id, subscription_period_end, pending_subscription_tier
+            FROM users WHERE id = $1`,
             [req.user.id]
         );
         
@@ -110,13 +114,16 @@ router.get('/user', auth, async (req, res) => {
             username: user.username,
             subscriptionTier: user.subscription_tier,
             subscription_id: user.subscription_id,
+            subscription_status: user.subscription_status,
+            subscription_period_end: user.subscription_period_end,
             name: user.name,
             role: user.role,
             created_at: user.created_at,
             image_url: user.image_url,
             favorite_sport: user.favorite_sport,
             favorite_team: user.favorite_team,
-            favorite_players: user.favorite_players
+            favorite_players: user.favorite_players,
+            pending_subscription_tier: user.pending_subscription_tier
         });
     } catch (error) {
         console.error('Error fetching user:', error);

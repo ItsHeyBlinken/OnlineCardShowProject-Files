@@ -220,6 +220,21 @@ const HomePage: React.FC = () => {
                     </div>
                 </div>
             </div>
+
+            {/* Hidden subscription test link - Development only */}
+            {process.env.NODE_ENV === 'development' && (
+                <div className="fixed bottom-4 right-4 z-50">
+                    <Link 
+                        to="/manage-subscription-test"
+                        className="bg-purple-700 text-white px-4 py-2 rounded-lg shadow-lg text-sm"
+                        onClick={(e) => {
+                            console.log("Direct navigation to /manage-subscription-test");
+                        }}
+                    >
+                        Subscription Test
+                    </Link>
+                </div>
+            )}
         </div>
     );
 };

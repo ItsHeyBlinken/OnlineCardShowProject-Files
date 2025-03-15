@@ -9,6 +9,9 @@ const Navbar = () => {
     const { itemCount } = useCart();
     const history = useHistory();
 
+    // Check if we're in development mode
+    const isDevelopment = process.env.NODE_ENV === 'development';
+
     const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setSearchQuery(e.target.value);
     };
@@ -162,6 +165,15 @@ const Navbar = () => {
                     </div>
                 </div>
             </div>
+
+            {/* Add a developer tools section if in development mode */}
+            {isDevelopment && user && (
+                <div className="absolute right-4 top-16 bg-purple-700 text-white p-2 rounded text-xs">
+                    <Link to="/manage-subscription-test" className="hover:underline">
+                        Subscription Test
+                    </Link>
+                </div>
+            )}
         </nav>
     );
 };

@@ -14,6 +14,9 @@ interface DashboardStats {
     subscriptionTier?: string;
     maxListings?: number;
     stripeConnected?: boolean;
+    subscriptionStatus?: string;
+    subscription_period_end?: string;
+    pending_subscription_tier?: string;
 }
 
 const SellerDashboard = () => {
@@ -164,7 +167,19 @@ const SellerDashboard = () => {
     const forceRefresh = useCallback(async () => {
         try {
             setLoading(true);
-            // Force fresh data with cache busting query parameter
+            console.log("Forcing dashboard refresh with cache busting...");
+            
+            // First refresh auth context to get latest user data
+            await fetch(`/api/auth/user?_=${new Date().getTime()}`, {
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                    'Cache-Control': 'no-cache, no-store, must-revalidate',
+                    'Pragma': 'no-cache',
+                    'Expires': '0'
+                }
+            });
+            
+            // Then force fresh data with cache busting query parameter for dashboard stats
             await fetchDashboardStats(true);
             setLoading(false);
         } catch (error) {
@@ -178,10 +193,22 @@ const SellerDashboard = () => {
         if (params.get('refresh') === 'true') {
             // Remove the parameter
             window.history.replaceState({}, document.title, window.location.pathname);
-            // Force refresh
-            forceRefresh();
+            
+            // Show a loading message
+            console.log("Dashboard refresh requested. Waiting for data to propagate...");
+            
+            // Wait a moment before refreshing to give webhooks time to complete
+            setTimeout(() => {
+                // Force refresh with the enhanced function
+                forceRefresh();
+            }, 2000);
         }
     }, [forceRefresh]);
+
+    const navigateToTestPage = () => {
+        console.log("Navigating to test page");
+        history.push('/manage-subscription-test');
+    };
 
     if (loading) {
         return (
@@ -212,12 +239,20 @@ const SellerDashboard = () => {
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="flex justify-between items-center mb-8">
                     <h1 className="text-3xl font-bold text-gray-900">Seller Dashboard</h1>
-                    <button
-                        onClick={handleCreateListing}
-                        className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
-                    >
-                        Create Listing
-                    </button>
+                    <div className="mt-6">
+                        <button
+                            onClick={handleCreateListing}
+                            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
+                        >
+                            Create Listing
+                        </button>
+                        <button
+                            onClick={navigateToTestPage} 
+                            className="ml-4 px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-purple-600 hover:bg-purple-700"
+                        >
+                            Subscription Test
+                        </button>
+                    </div>
                 </div>
                 {/* Header */}
                 <div className="md:flex md:items-center md:justify-between">
@@ -245,7 +280,12 @@ const SellerDashboard = () => {
                 {hasListings ? (
                     <p>You have listings available.</p>
                 ) : (
-                    <button onClick={handleCreateListing}>Create Your First Listing</button>
+                    <div className="flex flex-col items-center justify-center w-full max-w-lg mx-auto p-6 bg-red-100 border border-red-300 rounded-lg shadow-md">
+                        <p className="text-lg font-bold text-red-800">Get Started by Creating Your First Listing!</p>
+                        <button onClick={handleCreateListing} className="mt-4 px-4 py-2 text-white bg-blue-600 rounded hover:bg-blue-700">
+                            Create Your First Listing
+                        </button>
+                    </div>
                 )}
 
                 {/* Stats Overview */}
@@ -373,6 +413,72 @@ const SellerDashboard = () => {
                                 <p className="mt-1 text-sm text-gray-500">
                                     Current Plan: <span className="font-medium">{stats.subscriptionTier}</span>
                                 </p>
+                                <p className="mt-1 text-sm text-gray-500">
+                                    Status: <span className={`font-medium ${stats.subscriptionStatus === 'active' ? 'text-green-600' : 'text-red-600'}`}>
+                                        {stats.subscriptionStatus === 'active' ? 'Active' : 'Inactive'}
+                                    </span>
+                                </p>
+                                {stats.pending_subscription_tier && (
+                                    <p className="mt-1 text-sm text-orange-600">
+                                        <span className="font-medium">
+                                            Downgrading to {stats.pending_subscription_tier} at the end of current period
+                                        </span>
+                                    </p>
+                                )}
+                                {stats.subscription_period_end && (
+                                    <p className="mt-1 text-sm text-gray-500">
+                                        Renews: <span className="font-medium">
+                                            {new Date(stats.subscription_period_end).toLocaleDateString()}
+                                        </span>
+                                    </p>
+                                )}
+                                <div className="mt-2">
+                                    <button 
+                                        onClick={async () => {
+                                            try {
+                                                if (!user?.id) return;
+                                                const token = localStorage.getItem('token');
+                                                setLoading(true);
+                                                const response = await fetch('/api/webhooks/refresh-subscription-status', {
+                                                    method: 'POST',
+                                                    headers: {
+                                                        'Content-Type': 'application/json',
+                                                        'Authorization': `Bearer ${token}`
+                                                    },
+                                                    body: JSON.stringify({ userId: user.id })
+                                                });
+                                                
+                                                const result = await response.json();
+                                                
+                                                if (response.ok) {
+                                                    console.log("Subscription refresh result:", result);
+                                                    alert(`Subscription status refreshed: ${result.message}`);
+                                                    await forceRefresh();
+                                                } else {
+                                                    console.error("Error refreshing subscription:", result);
+                                                    // Show a more user-friendly message
+                                                    if (result.message.includes('no subscription')) {
+                                                        alert("You're currently on the Basic tier. No paid subscription is active.");
+                                                    } else {
+                                                        alert(`Error refreshing: ${result.message || 'Unknown error'}`);
+                                                    }
+                                                }
+                                            } catch (error) {
+                                                console.error("Error refreshing subscription:", error);
+                                                alert("Failed to refresh subscription status. Please try again.");
+                                            } finally {
+                                                setLoading(false);
+                                            }
+                                        }}
+                                        className="text-xs text-blue-600 hover:text-blue-800 flex items-center"
+                                        disabled={loading}
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                        </svg>
+                                        {loading ? 'Refreshing...' : 'Refresh Subscription Status'}
+                                    </button>
+                                </div>
                                 <div className="mt-2">
                                     <div className="flex items-center">
                                         <div className="flex-1">

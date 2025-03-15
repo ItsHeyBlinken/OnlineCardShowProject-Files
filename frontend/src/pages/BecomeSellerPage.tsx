@@ -1,17 +1,31 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useHistory } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
 // Progress steps for the seller onboarding process
-const STEPS = [
-  'Store Details',
-  'Subscription Plan',
-  'ID Verification',
-  'Stripe Connect'
-];
+const getSteps = (selectedTier: string) => {
+  const baseSteps = [
+    'Store Details',
+    'Subscription Plan',
+    'ID Verification', 
+    'Stripe Connect'
+  ];
+  
+  // Add payment step only for paid plans and at the end of the flow
+  if (selectedTier !== 'Free') {
+    baseSteps.push('Payment');
+  }
+  
+  return baseSteps;
+};
 
-const BecomeSellerPage = () => {
+// Add interface for props
+interface BecomeSellerPageProps {
+  directMode?: boolean;
+}
+
+const BecomeSellerPage: React.FC<BecomeSellerPageProps> = ({ directMode = false }) => {
   const { user, checkAuth } = useAuth();
   const history = useHistory();
   const [currentStep, setCurrentStep] = useState(0);
@@ -35,6 +49,13 @@ const BecomeSellerPage = () => {
   
   // Subscription tier selection
   const [selectedTier, setSelectedTier] = useState('Free');
+  
+  // Get steps based on the selected tier
+  const STEPS = getSteps(selectedTier);
+  
+  // Payment status tracking
+  const paymentComplete = false; // Convert from state to constant since setter is never used
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   
   // ID verification details
   const [idDetails, setIdDetails] = useState({
@@ -96,6 +117,60 @@ const BecomeSellerPage = () => {
     });
   };
   
+  // New function to handle Stripe Checkout for subscription
+  const handleSubscriptionCheckout = async () => {
+    setIsProcessingPayment(true);
+    setError('');
+    
+    try {
+      // Save the seller details to session storage before redirecting
+      sessionStorage.setItem('sellerDetails', JSON.stringify({
+        storeName: storeDetails.storeName,
+        description: storeDetails.description,
+        contactEmail: storeDetails.contactEmail,
+        shippingPreferences: storeDetails.shippingPreferences,
+        subscriptionTier: selectedTier,
+        verified: true
+      }));
+      
+      // Create a checkout session with Stripe
+      const response = await axios.post('/api/payments/create-subscription-checkout', {
+        tier: selectedTier,
+        // Include seller details in the metadata
+        sellerData: {
+          userId: user?.id, // Include the user ID for webhook processing
+          storeName: storeDetails.storeName,
+          description: storeDetails.description,
+          contactEmail: storeDetails.contactEmail,
+        },
+        // Redirect directly to the seller dashboard after successful payment
+        successUrl: `${window.location.origin}/become-seller/complete`,
+        cancelUrl: `${window.location.origin}/become-seller?step=${currentStep}`
+      });
+      
+      // Redirect to Stripe Checkout
+      window.location.href = response.data.url;
+    } catch (error: unknown) {
+      console.error('Error creating checkout session:', error);
+      const errorMsg = error instanceof Error 
+        ? error.message 
+        : (error as any)?.response?.data?.message || 'Failed to create checkout session';
+      setError(errorMsg);
+      setIsProcessingPayment(false);
+    }
+  };
+  
+  // Check URL parameters on component mount to handle redirect from Stripe
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const stepParam = urlParams.get('step');
+    
+    // If step param exists, navigate to that step
+    if (stepParam) {
+      setCurrentStep(parseInt(stepParam));
+    }
+  }, []);
+  
   // Handle next step button
   const handleNextStep = async () => {
     setError('');
@@ -108,7 +183,7 @@ const BecomeSellerPage = () => {
         setError('Please fill in all required fields');
         return;
       }
-    } else if (currentStep === 2) {
+    } else if (STEPS[currentStep] === 'ID Verification') {
       // Validate ID verification
       if (!idDetails.fullName || !idDetails.idNumber || !idDetails.idImage) {
         setError('Please fill in all ID verification fields');
@@ -130,6 +205,12 @@ const BecomeSellerPage = () => {
       
       // Only proceed if verification was successful
       if (!verified) return;
+    } else if (STEPS[currentStep] === 'Payment') {
+      // If this is the payment step, initiate payment and don't proceed to next step
+      if (!paymentComplete) {
+        handleSubscriptionCheckout();
+        return; // Don't advance step - redirect to Stripe will happen
+      }
     }
     
     // Move to next step if not on the last step
@@ -155,14 +236,15 @@ const BecomeSellerPage = () => {
         contactEmail: storeDetails.contactEmail,
         shippingPreferences: storeDetails.shippingPreferences,
         subscriptionTier: selectedTier,
+        subscriptionActive: selectedTier === 'Free' || paymentComplete,
         verified: true // In a real app, this would come from the verification service
       });
       
       // Update auth context with new user role
       await checkAuth();
       
-      // Redirect to storefront customization page
-      history.push('/seller/customize');
+      // Redirect to seller dashboard instead of customization page
+      history.push('/seller/dashboard');
     } catch (error: unknown) {
       console.error('Error creating seller account:', error);
       const errorMsg = error instanceof Error 
@@ -177,13 +259,65 @@ const BecomeSellerPage = () => {
     // In a real app, this would redirect to Stripe Connect OAuth flow
     // For now, we'll simulate a successful connection and move to the next step
     setSuccess('Stripe account connected successfully!');
-    handleFinalSubmit();
+    
+    // If using the Free tier, finalize the account creation process
+    if (selectedTier === 'Free') {
+      handleFinalSubmit();
+    } else {
+      // For paid tiers, proceed to payment step
+      if (currentStep < STEPS.length - 1) {
+        setCurrentStep(currentStep + 1);
+      }
+    }
   };
+  
+  // Direct seller registration function
+  const handleDirectRegistration = async () => {
+    setIsProcessingPayment(true);
+    setError('');
+    
+    try {
+      console.log('Starting direct seller registration bypassing payment...');
+      
+      // Call the direct endpoint we created
+      const response = await axios.post('/api/webhooks/test-set-seller-role', {
+        userId: user?.id
+      });
+      
+      console.log('Direct registration response:', response.data);
+      
+      // Update auth context with new user role
+      await checkAuth();
+      
+      // Show success message
+      setSuccess('Successfully registered as a seller! Redirecting to dashboard...');
+      
+      // Redirect to seller dashboard after a delay
+      setTimeout(() => {
+        history.push('/seller/dashboard');
+      }, 2000);
+    } catch (error: any) {
+      console.error('Error with direct registration:', error);
+      const errorMsg = error.response?.data?.message || error.message || 'Failed to register as seller';
+      setError(errorMsg);
+    } finally {
+      setIsProcessingPayment(false);
+    }
+  };
+
+  // Add a useEffect to handle direct mode automatically
+  useEffect(() => {
+    if (directMode && user?.id) {
+      handleDirectRegistration();
+    }
+  }, [directMode, user?.id]);
   
   // Render the current step content
   const renderStepContent = () => {
-    switch (currentStep) {
-      case 0: // Store Details
+    const stepName = STEPS[currentStep];
+    
+    switch (stepName) {
+      case 'Store Details':
         return (
           <div className="space-y-6">
             <div>
@@ -297,7 +431,7 @@ const BecomeSellerPage = () => {
           </div>
         );
         
-      case 1: // Subscription Plan
+      case 'Subscription Plan':
         return (
           <div className="space-y-6">
             <h3 className="text-lg font-medium text-gray-900 mb-4">Choose Your Subscription Tier</h3>
@@ -442,7 +576,54 @@ const BecomeSellerPage = () => {
           </div>
         );
         
-      case 2: // ID Verification
+      case 'Payment':
+        return (
+          <div className="space-y-6">
+            <h3 className="text-lg font-medium text-gray-900 mb-2">Payment for {selectedTier} Plan</h3>
+            <p className="text-sm text-gray-500 mb-4">
+              You selected the {selectedTier} plan at {
+                selectedTier === 'Basic' ? '$50' : 
+                selectedTier === 'Pro' ? '$100' : 
+                selectedTier === 'Premium' ? '$300' : '$0'
+              }/month
+            </p>
+            
+            {paymentComplete ? (
+              <div className="p-4 rounded-lg bg-green-50 border border-green-200 flex items-center">
+                <svg className="h-8 w-8 text-green-500 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <div>
+                  <h4 className="font-medium text-green-800">Payment Successful</h4>
+                  <p className="text-sm text-green-600">Your subscription has been activated.</p>
+                </div>
+              </div>
+            ) : (
+              <div className="p-6 border border-gray-200 rounded-lg bg-gray-50">
+                <div className="flex flex-col items-center text-center">
+                  <svg className="w-16 h-16 text-blue-500 mb-4" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" 
+                      stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                  <h4 className="text-lg font-medium text-gray-900 mb-2">Complete your subscription payment</h4>
+                  <p className="text-sm text-gray-500 mb-4">
+                    You'll be redirected to Stripe to complete your payment securely.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={handleSubscriptionCheckout}
+                    disabled={isProcessingPayment}
+                    className="px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:bg-blue-300"
+                  >
+                    {isProcessingPayment ? 'Processing...' : 'Proceed to Payment'}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        );
+        
+      case 'ID Verification':
         return (
           <div className="space-y-6">
             <h3 className="text-lg font-medium text-gray-900 mb-2">ID Verification</h3>
@@ -513,7 +694,7 @@ const BecomeSellerPage = () => {
           </div>
         );
         
-      case 3: // Stripe Connect
+      case 'Stripe Connect':
         return (
           <div className="space-y-6">
             <h3 className="text-lg font-medium text-gray-900 mb-2">Connect to Stripe</h3>
@@ -550,57 +731,15 @@ const BecomeSellerPage = () => {
   };
   
   return (
-    <div className="min-h-screen bg-gray-50 py-12">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="bg-white shadow rounded-lg overflow-hidden">
-          {/* Progress indicator */}
-          <div className="px-4 py-5 border-b border-gray-200 sm:px-6">
-            <h2 className="text-2xl font-bold text-gray-900">Become a Seller</h2>
-            <p className="mt-1 text-sm text-gray-500">Complete the following steps to create your seller account</p>
-            
-            <div className="mt-6">
-              <div className="flex items-center justify-between">
-                {STEPS.map((step, index) => (
-                  <React.Fragment key={index}>
-                    <div className="flex flex-col items-center">
-                      <div 
-                        className={`flex items-center justify-center h-10 w-10 rounded-full ${
-                          index < currentStep 
-                            ? 'bg-green-500' 
-                            : index === currentStep 
-                              ? 'bg-blue-600 text-white border-2 border-blue-600' 
-                              : 'bg-gray-200 text-gray-500'
-                        }`}
-                      >
-                        {index < currentStep ? (
-                          <svg className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                          </svg>
-                        ) : (
-                          <span className="text-sm font-medium">{index + 1}</span>
-                        )}
-                      </div>
-                      <span className={`mt-2 text-xs font-medium ${
-                        index <= currentStep ? 'text-gray-900' : 'text-gray-500'
-                      }`}>
-                        {step}
-                      </span>
-                    </div>
-                    
-                    {index < STEPS.length - 1 && (
-                      <div 
-                        className={`flex-1 h-1 mx-2 ${
-                          index < currentStep ? 'bg-green-500' : 'bg-gray-200'
-                        }`}
-                      />
-                    )}
-                  </React.Fragment>
-                ))}
-              </div>
-            </div>
+    <div className="min-h-screen bg-gray-50 py-8">
+      {directMode ? (
+        // Direct mode UI
+        <div className="max-w-lg mx-auto bg-white shadow overflow-hidden sm:rounded-lg">
+          <div className="px-4 py-5 sm:px-6">
+            <h2 className="text-lg font-medium text-gray-900">Seller Registration</h2>
+            <p className="mt-1 text-sm text-gray-500">Registering you as a seller directly (Debug Mode)</p>
           </div>
           
-          {/* Step content */}
           <div className="px-4 py-5 sm:p-6">
             {error && (
               <div className="mb-4 p-4 rounded-md bg-red-50 border border-red-200">
@@ -634,34 +773,136 @@ const BecomeSellerPage = () => {
               </div>
             )}
             
-            {renderStepContent()}
-          </div>
-          
-          {/* Navigation buttons */}
-          <div className="px-4 py-4 bg-gray-50 sm:px-6 flex justify-between">
-            <button
-              type="button"
-              onClick={handlePrevStep}
-              disabled={currentStep === 0}
-              className={`px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md ${
-                currentStep === 0 
-                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
-                  : 'bg-white text-gray-700 hover:bg-gray-50'
-              }`}
-            >
-              Previous
-            </button>
-            
-            <button
-              type="button"
-              onClick={currentStep === STEPS.length - 1 ? connectToStripe : handleNextStep}
-              className="ml-3 px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700"
-            >
-              {currentStep === STEPS.length - 1 ? 'Complete Registration' : 'Next'}
-            </button>
+            {isProcessingPayment ? (
+              <div className="flex justify-center items-center py-10">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-4 border-blue-600"></div>
+                <p className="ml-3 text-gray-600">Processing your registration...</p>
+              </div>
+            ) : (
+              <div className="flex justify-center">
+                <button
+                  onClick={handleDirectRegistration}
+                  className="px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700"
+                >
+                  Register as Seller (Debug Mode)
+                </button>
+              </div>
+            )}
           </div>
         </div>
-      </div>
+      ) : (
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="bg-white shadow rounded-lg overflow-hidden">
+            {/* Progress indicator */}
+            <div className="px-4 py-5 border-b border-gray-200 sm:px-6">
+              <h2 className="text-2xl font-bold text-gray-900">Become a Seller</h2>
+              <p className="mt-1 text-sm text-gray-500">Complete the following steps to create your seller account</p>
+              
+              <div className="mt-6">
+                <div className="flex items-center justify-between">
+                  {STEPS.map((step, index) => (
+                    <React.Fragment key={index}>
+                      <div className="flex flex-col items-center">
+                        <div 
+                          className={`flex items-center justify-center h-10 w-10 rounded-full ${
+                            index < currentStep 
+                              ? 'bg-green-500' 
+                              : index === currentStep 
+                                ? 'bg-blue-600 text-white border-2 border-blue-600' 
+                                : 'bg-gray-200 text-gray-500'
+                          }`}
+                        >
+                          {index < currentStep ? (
+                            <svg className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            </svg>
+                          ) : (
+                            <span className="text-sm font-medium">{index + 1}</span>
+                          )}
+                        </div>
+                        <span className={`mt-2 text-xs font-medium ${
+                          index <= currentStep ? 'text-gray-900' : 'text-gray-500'
+                        }`}>
+                          {step}
+                        </span>
+                      </div>
+                      
+                      {index < STEPS.length - 1 && (
+                        <div 
+                          className={`flex-1 h-1 mx-2 ${
+                            index < currentStep ? 'bg-green-500' : 'bg-gray-200'
+                          }`}
+                        />
+                      )}
+                    </React.Fragment>
+                  ))}
+                </div>
+              </div>
+            </div>
+            
+            {/* Step content */}
+            <div className="px-4 py-5 sm:p-6">
+              {error && (
+                <div className="mb-4 p-4 rounded-md bg-red-50 border border-red-200">
+                  <div className="flex">
+                    <div className="flex-shrink-0">
+                      <svg className="h-5 w-5 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                      </svg>
+                    </div>
+                    <div className="ml-3">
+                      <h3 className="text-sm font-medium text-red-800">Error</h3>
+                      <p className="text-sm text-red-700 mt-1">{error}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+              
+              {success && (
+                <div className="mb-4 p-4 rounded-md bg-green-50 border border-green-200">
+                  <div className="flex">
+                    <div className="flex-shrink-0">
+                      <svg className="h-5 w-5 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </div>
+                    <div className="ml-3">
+                      <h3 className="text-sm font-medium text-green-800">Success</h3>
+                      <p className="text-sm text-green-700 mt-1">{success}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+              
+              {renderStepContent()}
+            </div>
+            
+            {/* Navigation buttons */}
+            <div className="px-4 py-4 bg-gray-50 sm:px-6 flex justify-between">
+              <button
+                type="button"
+                onClick={handlePrevStep}
+                disabled={currentStep === 0}
+                className={`px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md ${
+                  currentStep === 0 
+                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
+                    : 'bg-white text-gray-700 hover:bg-gray-50'
+                }`}
+              >
+                Previous
+              </button>
+              
+              <button
+                type="button"
+                onClick={currentStep === STEPS.length - 1 ? connectToStripe : handleNextStep}
+                className="ml-3 px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700"
+              >
+                {currentStep === STEPS.length - 1 ? 'Complete Registration' : 'Next'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

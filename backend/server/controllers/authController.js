@@ -87,7 +87,21 @@ const becomeSeller = async (req, res) => {
       return res.status(401).json({ message: 'Not authenticated' });
     }
 
-    const { businessName, phoneNumber, address, description } = req.body;
+    // Handle both naming conventions (old and new)
+    const { 
+      businessName, phoneNumber, address, description,
+      // New parameters from BecomeSellerPage
+      storeName, contactEmail, shippingPreferences, subscriptionTier, 
+      subscriptionActive, verified 
+    } = req.body;
+
+    // Use the appropriate parameters
+    const finalBusinessName = storeName || businessName;
+    const finalDescription = description;
+    
+    if (!finalBusinessName) {
+      return res.status(400).json({ message: 'Business name is required' });
+    }
 
     // Start a transaction
     const client = await pool.connect();
@@ -100,15 +114,29 @@ const becomeSeller = async (req, res) => {
         ['seller', req.user.id]
       );
 
-      // Create seller profile
-      await client.query(
-        'INSERT INTO seller_profiles (user_id, business_name, phone_number, address, description) VALUES ($1, $2, $3, $4, $5)',
-        [req.user.id, businessName, phoneNumber, address, description]
+      // Create seller profile with a flexible approach to handle both formats
+      const insertResult = await client.query(
+        `INSERT INTO seller_profiles 
+         (user_id, business_name, phone_number, address, description, 
+          subscription_tier, subscription_active, shipping_preferences) 
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+         RETURNING *`,
+        [
+          req.user.id, 
+          finalBusinessName, 
+          phoneNumber || null, 
+          address || null, 
+          finalDescription || null,
+          subscriptionTier || 'Basic',
+          subscriptionActive || false,
+          shippingPreferences ? JSON.stringify(shippingPreferences) : null
+        ]
       );
 
       await client.query('COMMIT');
 
       const updatedUser = userResult.rows[0];
+      const sellerProfile = insertResult.rows[0];
       
       // Generate new token with updated role
       const token = jwt.sign(
@@ -120,7 +148,8 @@ const becomeSeller = async (req, res) => {
       res.json({ 
         message: 'Successfully became a seller',
         token, // Send new token
-        user: updatedUser
+        user: updatedUser,
+        sellerProfile
       });
     } catch (error) {
       await client.query('ROLLBACK');
@@ -130,7 +159,7 @@ const becomeSeller = async (req, res) => {
     }
   } catch (error) {
     console.error('Error becoming seller:', error);
-    res.status(500).json({ message: 'Server error during role update' });
+    res.status(500).json({ message: 'Server error during role update', error: error.message });
   }
 };
 

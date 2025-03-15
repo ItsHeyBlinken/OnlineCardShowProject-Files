@@ -10,7 +10,7 @@ router.get('/dashboard', auth, async (req, res) => {
 
         // Fetch user data
         const userResult = await pool.query(
-            'SELECT id, username, email, subscription_tier, subscription_id FROM users WHERE id = $1',
+            'SELECT id, username, email, role, subscription_tier, subscription_id, subscription_status, subscription_period_end, pending_subscription_tier, stripe_connect_id FROM users WHERE id = $1',
             [userId]
         );
 
@@ -19,6 +19,29 @@ router.get('/dashboard', auth, async (req, res) => {
         }
 
         const user = userResult.rows[0];
+        
+        // Ensure seller has at least a Basic active subscription
+        if (user.role === 'seller' && (!user.subscription_status || user.subscription_status !== 'active')) {
+            console.log(`Setting user ${userId} with seller role to Basic active subscription status`);
+            
+            try {
+                await pool.query(
+                    `UPDATE users SET 
+                      subscription_tier = COALESCE(subscription_tier, 'Basic'),
+                      subscription_status = 'active'
+                     WHERE id = $1`,
+                    [userId]
+                );
+                
+                // Update the user object to reflect the changes
+                user.subscription_tier = user.subscription_tier || 'Basic';
+                user.subscription_status = 'active';
+            } catch (err) {
+                console.error('Error updating seller subscription status:', err);
+                // Continue processing even if update fails
+            }
+        }
+        
         const subscriptionTier = user.subscription_tier || 'Basic';
 
         // Calculate max listings based on tier
@@ -38,16 +61,22 @@ router.get('/dashboard', auth, async (req, res) => {
 
         const activeListings = parseInt(listingsResult.rows[0].count) || 0;
 
+        // Check if connected to Stripe
+        const hasStripeConnect = !!user.stripe_connect_id;
+
         // Prepare stats to send
         const stats = {
             activeListings,
-            totalSales: 0, // Replace with actual calculation
+            totalSales: 0, // Replace with actual calculation from orders table
             totalOrders: 0, // Replace with actual calculation
             pendingOrders: 0, // Replace with actual calculation
-            stripeConnected: false, // Replace with actual value
+            stripeConnected: hasStripeConnect,
             subscriptionTier,
+            subscriptionStatus: user.subscription_status || 'inactive',
             maxListings,
-            subscription_id: user.subscription_id
+            subscription_id: user.subscription_id,
+            subscription_period_end: user.subscription_period_end,
+            pending_subscription_tier: user.pending_subscription_tier
         };
 
         console.log('Sending dashboard stats:', stats);

@@ -26,8 +26,13 @@ import SubscriptionManagementPage from './pages/SubscriptionManagementPage';
 import InboxPage from './pages/InboxPage';
 import SearchResultsPage from './pages/SearchResultsPage';
 import ListingDetailPage from './pages/ListingDetailPage';
+import SellerRegistrationComplete from './pages/SellerRegistrationComplete';
+import ForceSellerPage from './pages/ForceSellerPage';
+import ManageSubscriptionTest from './pages/ManageSubscriptionTest';
 
 const App = () => {
+  console.log("App component rendered - routes should be registered");
+  
   return (
     <AuthProvider>
       <CartProvider>
@@ -72,6 +77,22 @@ const App = () => {
                   )}
                 />
                 <Route
+                  path="/test-seller"
+                  render={() => (
+                    <ProtectedRoute>
+                      <ForceSellerPage />
+                    </ProtectedRoute>
+                  )}
+                />
+                <Route
+                  path="/manage-subscription-test"
+                  component={ManageSubscriptionTest}
+                />
+                <Route
+                  path="/test2"
+                  component={ManageSubscriptionTest}
+                />
+                <Route
                   path="/listings"
                   render={() => (
                     <ProtectedRoute>
@@ -94,6 +115,22 @@ const App = () => {
                   render={() => (
                     <ProtectedRoute>
                       <BecomeSellerPage />
+                    </ProtectedRoute>
+                  )}
+                />
+                <Route
+                  path="/become-seller-direct"
+                  render={() => (
+                    <ProtectedRoute>
+                      <BecomeSellerPage directMode={true} />
+                    </ProtectedRoute>
+                  )}
+                />
+                <Route
+                  path="/become-seller/complete"
+                  render={() => (
+                    <ProtectedRoute>
+                      <SellerRegistrationComplete />
                     </ProtectedRoute>
                   )}
                 />

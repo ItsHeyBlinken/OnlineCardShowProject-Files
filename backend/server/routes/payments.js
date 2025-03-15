@@ -36,7 +36,7 @@ router.post('/create-payment-intent', authenticateToken, async (req, res) => {
   }
 });
 
-// Create a subscription checkout session
+// Create a subscription checkout session for seller plans
 router.post('/create-subscription-checkout', authenticateToken, async (req, res) => {
   try {
     // Check if user is authenticated
@@ -47,95 +47,273 @@ router.post('/create-subscription-checkout', authenticateToken, async (req, res)
       });
     }
     
-    const { priceId } = req.body;
+    // Handle both formats - either tier name or direct priceId
+    const { tier, priceId: directPriceId } = req.body;
+    let { successUrl, cancelUrl } = req.body;
+    
+    let priceId;
+    let tierName;
+    
+    // If direct priceId is provided, use it (from SubscriptionManagementPage)
+    if (directPriceId) {
+      console.log(`Using provided price ID: ${directPriceId}`);
+      priceId = directPriceId;
+      
+      // Try to determine tier name from the price ID
+      if (directPriceId === process.env.STRIPE_STARTER_PRICE_ID) {
+        tierName = 'Starter';
+      } else if (directPriceId === process.env.STRIPE_PRO_PRICE_ID) {
+        tierName = 'Pro';
+      } else if (directPriceId === process.env.STRIPE_PREMIUM_PRICE_ID) {
+        tierName = 'Premium';
+      } else {
+        tierName = 'Unknown';
+      }
+    }
+    // Otherwise use the tier parameter (from BecomeSellerPage)
+    else if (tier) {
+      switch (tier) {
+        case 'Basic':
+          // Basic is the free tier, so no price ID needed
+          tierName = 'Basic';
+          return res.status(400).json({ 
+            error: 'Invalid tier for checkout',
+            message: 'The Basic plan is free and does not require checkout'
+          });
+        case 'Starter':
+          priceId = process.env.STRIPE_STARTER_PRICE_ID;
+          tierName = 'Starter';
+          break;
+        case 'Pro':
+          priceId = process.env.STRIPE_PRO_PRICE_ID;
+          tierName = 'Pro';
+          break;
+        case 'Premium':
+          priceId = process.env.STRIPE_PREMIUM_PRICE_ID;
+          tierName = 'Premium';
+          break;
+        default:
+          return res.status(400).json({ error: 'Invalid subscription tier' });
+      }
+    } else {
+      return res.status(400).json({ error: 'Either tier or priceId is required' });
+    }
+    
+    if (!successUrl || !cancelUrl) {
+      // Default URLs if not provided
+      successUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/subscription-management?success=true`;
+      cancelUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/subscription-management?cancelled=true`;
+    }
     
     if (!priceId) {
-      return res.status(400).json({ error: 'Price ID is required' });
+      return res.status(500).json({ 
+        error: 'Price ID not configured for this tier',
+        message: `Missing price ID for tier: ${tierName}. Please check your .env file.`
+      });
     }
-
-    console.log('Creating subscription checkout with price ID:', priceId);
-    console.log('User info:', { id: req.user.id, email: req.user.email });
-
-    // Check if user already has a Stripe customer ID
-    const userResult = await pool.query(
+    
+    console.log(`Creating checkout for tier ${tierName} with price ID ${priceId}`);
+    
+    // Get existing customer or create a new one
+    let customerId;
+    const existingCustomer = await pool.query(
       'SELECT stripe_customer_id FROM users WHERE id = $1',
       [req.user.id]
     );
     
-    let customerId = userResult.rows[0]?.stripe_customer_id;
-    console.log('Existing customer ID:', customerId);
-    
-    // If no customer ID exists, create a new customer
-    if (!customerId) {
-      console.log('Creating new Stripe customer for user:', req.user.email);
-      try {
-        const customer = await stripe.customers.create({
-          email: req.user.email,
-          metadata: {
-            user_id: req.user.id
-          }
-        });
-        
-        customerId = customer.id;
-        console.log('Created new customer with ID:', customerId);
-        
-        // Save customer ID to user record
-        await pool.query(
-          'UPDATE users SET stripe_customer_id = $1 WHERE id = $2',
-          [customerId, req.user.id]
-        );
-      } catch (stripeError) {
-        console.error('Stripe customer creation error:', stripeError);
-        return res.status(500).json({ 
-          error: 'Failed to create Stripe customer',
-          message: stripeError.message
-        });
-      }
+    if (existingCustomer.rows.length > 0 && existingCustomer.rows[0].stripe_customer_id) {
+      customerId = existingCustomer.rows[0].stripe_customer_id;
+    } else {
+      // Create a new customer in Stripe
+      const customer = await stripe.customers.create({
+        email: req.user.email,
+        metadata: {
+          user_id: req.user.id
+        }
+      });
+      
+      customerId = customer.id;
+      
+      // Save the customer ID in the database
+      await pool.query(
+        'UPDATE users SET stripe_customer_id = $1 WHERE id = $2',
+        [customerId, req.user.id]
+      );
     }
     
-    // Create a checkout session
     try {
-      console.log('Creating checkout session with:', {
-        customerId,
-        priceId,
-        successUrl: `${process.env.FRONTEND_URL}/subscription-management?success=true`,
-        cancelUrl: `${process.env.FRONTEND_URL}/subscription-management?cancelled=true`
-      });
-
+      // Create a Stripe Checkout Session
       const session = await stripe.checkout.sessions.create({
-        payment_method_types: ['card'],
         customer: customerId,
+        payment_method_types: ['card'],
         line_items: [
           {
             price: priceId,
             quantity: 1,
-          },
+          }
         ],
         mode: 'subscription',
-        success_url: `${process.env.FRONTEND_URL}/subscription-management?success=true`,
-        cancel_url: `${process.env.FRONTEND_URL}/subscription-management?cancelled=true`,
+        success_url: successUrl,
+        cancel_url: cancelUrl,
+        metadata: {
+          user_id: req.user.id,
+          tier: tierName,
+          is_seller_subscription: 'true'
+        }
       });
       
-      console.log('Checkout session created:', session.id);
-      res.json({ sessionId: session.id });
-    } catch (stripeError) {
-      console.error('Stripe session creation error:', { 
-        message: stripeError.message,
-        code: stripeError.code,
-        type: stripeError.type,
-        param: stripeError.param,
-        detail: stripeError.raw
+      console.log(`Created checkout session: ${session.id} for tier ${tierName}`);
+      
+      // Return both the URL and sessionId to support both frontend implementations
+      res.json({ 
+        url: session.url,
+        sessionId: session.id 
       });
-      return res.status(500).json({ 
-        error: 'Failed to create checkout session',
-        message: stripeError.message,
-        code: stripeError.code
+    } catch (stripeError) {
+      console.error('Stripe API Error:', stripeError);
+      
+      if (stripeError.type === 'StripeInvalidRequestError' && 
+          stripeError.raw && 
+          stripeError.raw.code === 'resource_missing') {
+        return res.status(400).json({
+          error: 'Invalid price ID',
+          message: `The price ID for the ${tierName} tier (${priceId}) does not exist in your Stripe account. Please check your Stripe Dashboard and update your .env file with the correct price IDs.`,
+          details: stripeError.message
+        });
+      }
+      
+      throw stripeError; // Re-throw for the outer catch block
+    }
+    
+  } catch (error) {
+    console.error('Error creating subscription checkout session:', error);
+    res.status(500).json({ 
+      error: 'Failed to create checkout session',
+      message: error.message
+    });
+  }
+});
+
+// Verify subscription checkout session and activate subscription
+router.get('/verify-subscription-checkout', authenticateToken, async (req, res) => {
+  try {
+    // Check if user is authenticated
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({ 
+        error: 'Authentication required', 
+        message: 'User not authenticated or user information not available'
       });
     }
+    
+    const { session_id } = req.query;
+    
+    if (!session_id) {
+      return res.status(400).json({ error: 'Session ID is required' });
+    }
+    
+    // Retrieve the checkout session from Stripe
+    const session = await stripe.checkout.sessions.retrieve(session_id, {
+      expand: ['subscription']
+    });
+    
+    if (!session) {
+      return res.status(404).json({ error: 'Checkout session not found' });
+    }
+    
+    // Verify that this session belongs to the current user
+    const stripeCustomerId = session.customer;
+    const userCheck = await pool.query(
+      'SELECT id FROM users WHERE stripe_customer_id = $1 AND id = $2',
+      [stripeCustomerId, req.user.id]
+    );
+    
+    if (userCheck.rows.length === 0) {
+      return res.status(403).json({ error: 'This checkout session does not belong to the current user' });
+    }
+    
+    // Check if the payment was successful
+    if (session.payment_status !== 'paid') {
+      return res.status(400).json({ 
+        error: 'Payment not completed', 
+        status: session.payment_status 
+      });
+    }
+    
+    // Get subscription details
+    const subscription = session.subscription;
+    if (!subscription) {
+      return res.status(400).json({ error: 'No subscription found in the session' });
+    }
+    
+    // Retrieve the subscription to get its period end (for expires_at)
+    const subscriptionDetails = await stripe.subscriptions.retrieve(subscription.id);
+    const expiresAt = new Date(subscriptionDetails.current_period_end * 1000); // Convert from Unix timestamp
+    const now = new Date();
+    
+    const subscriptionTier = session.metadata.tier;
+    
+    // Check if the user already has a subscription record
+    const existingSubscription = await pool.query(
+      'SELECT id FROM subscriptions WHERE user_id = $1',
+      [req.user.id]
+    );
+    
+    if (existingSubscription.rows.length > 0) {
+      // Update existing subscription
+      await pool.query(
+        `UPDATE subscriptions 
+        SET tier = $1, expires_at = $2 
+        WHERE user_id = $3`,
+        [subscriptionTier, expiresAt, req.user.id]
+      );
+    } else {
+      // Create new subscription record
+      await pool.query(
+        `INSERT INTO subscriptions 
+        (user_id, tier, expires_at, created_at)
+        VALUES ($1, $2, $3, $4)`,
+        [req.user.id, subscriptionTier, expiresAt, now]
+      );
+    }
+    
+    // Update user information
+    await pool.query(
+      `UPDATE users SET subscription_tier = $1 WHERE id = $2`,
+      [subscriptionTier, req.user.id]
+    );
+    
+    // Update seller_profiles subscription information if the table exists
+    try {
+      const sellerProfileExists = await pool.query(
+        'SELECT user_id FROM seller_profiles WHERE user_id = $1',
+        [req.user.id]
+      );
+      
+      if (sellerProfileExists.rows.length > 0) {
+        await pool.query(
+          `UPDATE seller_profiles 
+          SET subscription_tier = $1, subscription_active = true
+          WHERE user_id = $2`,
+          [subscriptionTier, req.user.id]
+        );
+      }
+    } catch (err) {
+      // If seller_profiles table doesn't exist, just continue
+      console.log('Note: seller_profiles table may not exist, continuing without updating it');
+    }
+    
+    res.json({
+      success: true,
+      message: 'Subscription verified and activated successfully',
+      tier: subscriptionTier,
+      subscription_id: subscription.id,
+      expires_at: expiresAt
+    });
+    
   } catch (error) {
-    console.error('Error creating subscription checkout:', error);
+    console.error('Error verifying subscription:', error);
     res.status(500).json({ 
-      error: 'Failed to create subscription checkout',
+      error: 'Failed to verify subscription', 
       message: error.message
     });
   }
@@ -768,6 +946,250 @@ router.get('/fix-subscription', auth, async (req, res) => {
   } catch (error) {
     console.error('Error fixing subscription:', error);
     res.status(500).json({ error: 'Fix failed', message: error.message });
+  }
+});
+
+// Downgrade a subscription (schedule update at end of current period)
+router.post('/downgrade-subscription', authenticateToken, async (req, res) => {
+  try {
+    // Check if user is authenticated
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({ 
+        error: 'Authentication required', 
+        message: 'User not authenticated or user information not available'
+      });
+    }
+    
+    const { newTier } = req.body;
+    console.log(`Downgrade request received - User ID: ${req.user.id}, New Tier: ${newTier}`);
+    
+    if (!newTier) {
+      return res.status(400).json({ error: 'New tier is required' });
+    }
+    
+    // Validate the tier
+    const validTiers = ['Basic', 'Starter', 'Pro', 'Premium'];
+    if (!validTiers.includes(newTier)) {
+      console.log(`Invalid tier specified: ${newTier}`);
+      return res.status(400).json({ error: 'Invalid tier specified' });
+    }
+    
+    // Get the user's subscription information
+    const userResult = await pool.query(
+      'SELECT subscription_tier, subscription_id, stripe_subscription_id, subscription_period_end FROM users WHERE id = $1',
+      [req.user.id]
+    );
+    
+    if (userResult.rows.length === 0) {
+      console.log(`User not found: ${req.user.id}`);
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    const user = userResult.rows[0];
+    const currentTier = user.subscription_tier || 'Basic';
+    console.log(`User current tier: ${currentTier}, Requested downgrade to: ${newTier}`);
+    
+    // Tier levels for comparison
+    const tierLevels = {
+      'Basic': 0,
+      'Starter': 1,
+      'Pro': 2,
+      'Premium': 3
+    };
+    console.log(`Tier level comparison: Current tier(${currentTier}): ${tierLevels[currentTier]}, New tier(${newTier}): ${tierLevels[newTier]}`);
+    
+    // Check if the new tier is actually a downgrade
+    if (tierLevels[newTier] >= tierLevels[currentTier]) {
+      return res.status(400).json({ 
+        error: 'Invalid downgrade', 
+        message: newTier === currentTier
+          ? `You are already on the ${currentTier} tier. No downgrade needed.`
+          : `Cannot downgrade from ${currentTier} to ${newTier} as it's not a lower tier.`
+      });
+    }
+    
+    // Get the subscription ID from the database
+    const subscriptionId = user.stripe_subscription_id || user.subscription_id;
+    
+    if (!subscriptionId) {
+      return res.status(400).json({ 
+        error: 'No active subscription', 
+        message: 'User does not have an active subscription to downgrade'
+      });
+    }
+    
+    // Check if this is a test subscription (starts with "sub_test_")
+    const isTestSubscription = subscriptionId.startsWith('sub_test_');
+    console.log(`Subscription type: ${isTestSubscription ? 'Test subscription' : 'Stripe subscription'} - ID: ${subscriptionId}`);
+    
+    // Current subscription end date - default to 30 days from now for test subscriptions
+    let currentPeriodEnd = user.subscription_period_end 
+      ? new Date(user.subscription_period_end) 
+      : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days from now
+    
+    if (isTestSubscription) {
+      // For test subscriptions, just update the database directly
+      try {
+        // Update user record with pending downgrade tier
+        await pool.query(
+          `UPDATE users SET 
+           pending_subscription_tier = $1
+           WHERE id = $2`,
+          [newTier, req.user.id]
+        );
+        
+        return res.json({
+          success: true,
+          message: `Your test subscription will be downgraded to ${newTier} at the end of your current billing period`,
+          effective_date: currentPeriodEnd.toISOString(),
+          current_tier: currentTier,
+          new_tier: newTier
+        });
+      } catch (error) {
+        console.error('Error updating test subscription:', error);
+        return res.status(500).json({ 
+          error: 'Failed to update test subscription', 
+          message: error.message
+        });
+      }
+    } else {
+      // For real Stripe subscriptions, proceed with Stripe API calls
+      let stripeSubscription;
+      
+      try {
+        // Retrieve the current subscription from Stripe
+        stripeSubscription = await stripe.subscriptions.retrieve(subscriptionId);
+      } catch (stripeError) {
+        console.error('Error retrieving Stripe subscription:', stripeError);
+        
+        // If Stripe can't find the subscription but it's in our database,
+        // we'll treat it as a test subscription even if it doesn't have the prefix
+        if (stripeError.code === 'resource_missing') {
+          console.log(`Stripe subscription not found, treating as test subscription: ${subscriptionId}`);
+          
+          // Update user record with pending downgrade tier
+          await pool.query(
+            `UPDATE users SET 
+             pending_subscription_tier = $1
+             WHERE id = $2`,
+            [newTier, req.user.id]
+          );
+          
+          return res.json({
+            success: true,
+            message: `Your subscription will be downgraded to ${newTier} at the end of your current billing period`,
+            effective_date: currentPeriodEnd.toISOString(),
+            current_tier: currentTier,
+            new_tier: newTier
+          });
+        }
+        
+        return res.status(400).json({ 
+          error: 'Failed to retrieve subscription', 
+          message: stripeError.message
+        });
+      }
+      
+      // Map tier names to price IDs
+      let newPriceId;
+      
+      if (newTier === 'Basic') {
+        // For Basic tier, we'll cancel the subscription at the end of the current period
+        try {
+          // Update the subscription to cancel at period end
+          const updatedSubscription = await stripe.subscriptions.update(subscriptionId, {
+            cancel_at_period_end: true,
+          });
+          
+          // Store the scheduled downgrade in the database
+          await pool.query(
+            `UPDATE users SET 
+             pending_subscription_tier = $1
+             WHERE id = $2`,
+            [newTier, req.user.id]
+          );
+          
+          // Calculate when the downgrade will take effect
+          const downgradeDate = new Date(updatedSubscription.current_period_end * 1000);
+          
+          return res.json({
+            success: true,
+            message: `Your subscription will be downgraded to ${newTier} at the end of your current billing period`,
+            effective_date: downgradeDate.toISOString(),
+            current_tier: currentTier,
+            new_tier: newTier
+          });
+        } catch (stripeError) {
+          console.error('Error cancelling subscription:', stripeError);
+          return res.status(500).json({ 
+            error: 'Failed to cancel subscription', 
+            message: stripeError.message
+          });
+        }
+      } else {
+        // For other tiers, we'll update the subscription with a new price
+        switch (newTier) {
+          case 'Starter':
+            newPriceId = process.env.STRIPE_STARTER_PRICE_ID;
+            break;
+          case 'Pro':
+            newPriceId = process.env.STRIPE_PRO_PRICE_ID;
+            break;
+          default:
+            return res.status(400).json({ error: 'Invalid tier for downgrade' });
+        }
+        
+        if (!newPriceId) {
+          return res.status(500).json({ 
+            error: 'Price ID not configured for this tier',
+            message: `Missing price ID for tier: ${newTier}. Please check your .env file.`
+          });
+        }
+        
+        try {
+          // Update the subscription with the new price at the end of the billing period
+          const updatedSubscription = await stripe.subscriptions.update(subscriptionId, {
+            proration_behavior: 'none',
+            billing_cycle_anchor: 'unchanged',
+            items: [{
+              id: stripeSubscription.items.data[0].id,
+              price: newPriceId,
+            }],
+          });
+          
+          // Store the scheduled downgrade in the database
+          await pool.query(
+            `UPDATE users SET 
+             pending_subscription_tier = $1
+             WHERE id = $2`,
+            [newTier, req.user.id]
+          );
+          
+          // Calculate when the downgrade will take effect
+          const downgradeDate = new Date(updatedSubscription.current_period_end * 1000);
+          
+          return res.json({
+            success: true,
+            message: `Your subscription will be downgraded to ${newTier} at the end of your current billing period`,
+            effective_date: downgradeDate.toISOString(),
+            current_tier: currentTier,
+            new_tier: newTier
+          });
+        } catch (stripeError) {
+          console.error('Error updating subscription:', stripeError);
+          return res.status(500).json({ 
+            error: 'Failed to update subscription', 
+            message: stripeError.message
+          });
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Error downgrading subscription:', error);
+    res.status(500).json({ 
+      error: 'Failed to downgrade subscription',
+      message: error.message
+    });
   }
 });
 
