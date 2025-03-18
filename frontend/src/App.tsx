@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Switch, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Switch, Route, Redirect } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { CartProvider } from './contexts/CartContext';
 import Navbar from './components/layout/Navbar';
@@ -29,6 +29,16 @@ import ListingDetailPage from './pages/ListingDetailPage';
 import SellerRegistrationComplete from './pages/SellerRegistrationComplete';
 import ForceSellerPage from './pages/ForceSellerPage';
 import ManageSubscriptionTest from './pages/ManageSubscriptionTest';
+// Admin imports
+import AdminDashboard from './pages/AdminDashboard';
+import UserManagement from './pages/UserManagement';
+import OrderManagement from './pages/OrderManagement';
+import ListingModeration from './pages/ListingModeration';
+import SubscriptionsPayments from './pages/SubscriptionsPayments';
+import SupportTickets from './pages/SupportTickets';
+import ReportsAnalytics from './pages/ReportsAnalytics';
+import SystemLogs from './pages/SystemLogs';
+import { isAdmin } from './utils/auth';
 
 const App = () => {
   console.log("App component rendered - routes should be registered");
@@ -52,6 +62,14 @@ const App = () => {
                     </ProtectedRoute>
                   )}
                 />
+                <AdminRoute path="/admin" exact component={AdminDashboard} />
+                <AdminRoute path="/admin/users" component={UserManagement} />
+                <AdminRoute path="/admin/orders" component={OrderManagement} />
+                <AdminRoute path="/admin/listings" component={ListingModeration} />
+                <AdminRoute path="/admin/subscriptions" component={SubscriptionsPayments} />
+                <AdminRoute path="/admin/tickets" component={SupportTickets} />
+                <AdminRoute path="/admin/reports" component={ReportsAnalytics} />
+                <AdminRoute path="/admin/logs" component={SystemLogs} />
                 <Route
                   path="/order-history"
                   render={() => (
@@ -191,6 +209,22 @@ const App = () => {
         </Router>
       </CartProvider>
     </AuthProvider>
+  );
+};
+
+// Create an AdminRoute component
+const AdminRoute = ({ component: Component, ...rest }: any) => {
+  return (
+    <Route
+      {...rest}
+      render={(props) =>
+        isAdmin() ? (
+          <Component {...props} />
+        ) : (
+          <Redirect to="/login" />
+        )
+      }
+    />
   );
 };
 
