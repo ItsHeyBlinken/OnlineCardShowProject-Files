@@ -3,6 +3,7 @@ import { Link, useHistory } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import axios from 'axios';
 import UserProfileEdit from '../components/profile/UserProfileEdit';
+import ReportIssueButton from '../components/ReportIssueButton';
 
 const defaultImage = '/images/logo1.jpg';
 
@@ -239,16 +240,22 @@ const SellerDashboard = () => {
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="flex justify-between items-center mb-8">
                     <h1 className="text-3xl font-bold text-gray-900">Seller Dashboard</h1>
-                    <div className="mt-6">
+                    <div className="mt-6 flex items-center space-x-2">
                         <button
                             onClick={handleCreateListing}
                             className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
                         >
                             Create Listing
                         </button>
+                        <ReportIssueButton
+                            userId={user?.id ? String(user.id) : ''}
+                            userName={user?.name || user?.username || ''}
+                            userEmail={user?.email || ''}
+                            variant="small"
+                        />
                         <button
                             onClick={navigateToTestPage} 
-                            className="ml-4 px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-purple-600 hover:bg-purple-700"
+                            className="px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-purple-600 hover:bg-purple-700"
                         >
                             Subscription Test
                         </button>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import AdminLayout from '../components/layout/AdminLayout';
 import { 
   MagnifyingGlassIcon,
@@ -8,28 +8,31 @@ import {
   PaperAirplaneIcon,
   ClockIcon,
   XCircleIcon,
-  ExclamationTriangleIcon
+  ExclamationTriangleIcon,
+  ArrowPathIcon
 } from '@heroicons/react/24/outline';
+import axios from 'axios';
 
 interface Attachment {
   id: string;
   name: string;
-  type: string;
   url: string;
+  size: number;
+  type: string;
 }
 
-interface Ticket {
+interface SupportTicket {
   id: string;
   userId: string;
   userName: string;
   userEmail: string;
   subject: string;
   message: string;
-  status: 'Open' | 'In Progress' | 'Closed';
-  priority: 'Low' | 'Medium' | 'High' | 'Urgent';
+  category: string;
+  priority: string;
+  status: string;
   dateSubmitted: string;
   lastUpdated: string;
-  category: string;
   attachments: Attachment[];
 }
 
@@ -37,11 +40,116 @@ type SortField = 'id' | 'userName' | 'subject' | 'status' | 'dateSubmitted' | 'p
 type SortDirection = 'asc' | 'desc';
 
 interface TicketDetailsModalProps {
-  ticket: Ticket | null;
+  ticket: SupportTicket | null;
   isOpen: boolean;
   onClose: () => void;
-  onStatusChange: (ticketId: string, newStatus: 'Open' | 'In Progress' | 'Closed') => void;
+  onStatusChange: (ticketId: string, newStatus: string) => void;
 }
+
+// Mock data for development
+const MOCK_TICKETS: SupportTicket[] = [
+  {
+    id: "T1001",
+    userId: "U5001",
+    userName: "John Smith",
+    userEmail: "john.smith@example.com",
+    subject: "Unable to add items to cart",
+    message: "Every time I try to add a card to my cart, I get an error message saying 'Operation failed'. This has been happening since yesterday.",
+    category: "Store Issues",
+    priority: "High",
+    status: "Open",
+    dateSubmitted: "2023-11-15T10:30:00Z",
+    lastUpdated: "2023-11-15T10:30:00Z",
+    attachments: [
+      {
+        id: "A001",
+        name: "error_screenshot.png",
+        url: "/uploads/error_screenshot.png",
+        size: 1024000,
+        type: "image/png"
+      }
+    ]
+  },
+  {
+    id: "T1002",
+    userId: "U3045",
+    userName: "Emily Johnson",
+    userEmail: "emily.j@example.com",
+    subject: "Payment failed but money deducted",
+    message: "I tried to purchase a card but got an error at checkout. The money was deducted from my account but I didn't receive any confirmation and the card isn't in my collection.",
+    category: "Payment Issues",
+    priority: "Urgent",
+    status: "In Progress",
+    dateSubmitted: "2023-11-14T16:45:00Z",
+    lastUpdated: "2023-11-15T09:20:00Z",
+    attachments: [
+      {
+        id: "A002",
+        name: "payment_receipt.pdf",
+        url: "/uploads/payment_receipt.pdf",
+        size: 512000,
+        type: "application/pdf"
+      }
+    ]
+  },
+  {
+    id: "T1003",
+    userId: "U1978",
+    userName: "Michael Brown",
+    userEmail: "m.brown@example.com",
+    subject: "Request to cancel subscription",
+    message: "I would like to cancel my premium subscription. Please provide instructions on how to do this.",
+    category: "Subscription",
+    priority: "Medium",
+    status: "Closed",
+    dateSubmitted: "2023-11-10T12:15:00Z",
+    lastUpdated: "2023-11-12T14:30:00Z",
+    attachments: []
+  },
+  {
+    id: "T1004",
+    userId: "U4210",
+    userName: "Sarah Wilson",
+    userEmail: "sarah.w@example.com",
+    subject: "Card quality issue",
+    message: "I received my limited edition card today, but it has scratches on the front. I've attached photos of the damage. Can I get a replacement?",
+    category: "Product Quality",
+    priority: "Medium",
+    status: "Open",
+    dateSubmitted: "2023-11-14T09:50:00Z",
+    lastUpdated: "2023-11-14T09:50:00Z",
+    attachments: [
+      {
+        id: "A003",
+        name: "damage_photo_1.jpg",
+        url: "/uploads/damage_photo_1.jpg",
+        size: 2048000,
+        type: "image/jpeg"
+      },
+      {
+        id: "A004",
+        name: "damage_photo_2.jpg",
+        url: "/uploads/damage_photo_2.jpg",
+        size: 1536000, 
+        type: "image/jpeg"
+      }
+    ]
+  },
+  {
+    id: "T1005",
+    userId: "U6532",
+    userName: "David Chen",
+    userEmail: "d.chen@example.com",
+    subject: "Feature request: Card statistics",
+    message: "It would be great if you could add a feature to track the performance statistics of cards in matches. This would help collectors understand the value of their cards better.",
+    category: "Feature Request",
+    priority: "Low",
+    status: "Open",
+    dateSubmitted: "2023-11-13T15:20:00Z",
+    lastUpdated: "2023-11-13T15:20:00Z",
+    attachments: []
+  }
+];
 
 const TicketDetailsModal: React.FC<TicketDetailsModalProps> = ({ 
   ticket, 
@@ -50,15 +158,38 @@ const TicketDetailsModal: React.FC<TicketDetailsModalProps> = ({
   onStatusChange 
 }) => {
   const [replyText, setReplyText] = useState('');
+  const [sendingReply, setSendingReply] = useState(false);
   
   if (!isOpen || !ticket) return null;
   
-  const handleReply = () => {
-    // In a real app, this would send the reply to an API
-    console.log(`Replying to ticket ${ticket.id} with: ${replyText}`);
-    setReplyText('');
-    // Optionally update status to In Progress
-    onStatusChange(ticket.id, 'In Progress');
+  const handleReply = async () => {
+    // Validate input
+    if (!replyText.trim()) return;
+    
+    try {
+      setSendingReply(true);
+      
+      // In a real app, this would send the reply to an API
+      // await axios.post(`/api/support-tickets/${ticket.id}/replies`, { message: replyText });
+      console.log(`Replying to ticket ${ticket.id} with: ${replyText}`);
+      
+      // Optionally update status to In Progress
+      if (ticket.status === 'Open') {
+        onStatusChange(ticket.id, 'In Progress');
+      }
+      
+      // Clear reply text
+      setReplyText('');
+    } catch (error) {
+      console.error('Error sending reply:', error);
+    } finally {
+      setSendingReply(false);
+    }
+  };
+  
+  const handleDownloadAttachment = (attachment: Attachment) => {
+    // Open attachment in new tab or download it
+    window.open(attachment.url, '_blank');
   };
   
   const getPriorityClass = (priority: string) => {
@@ -124,8 +255,8 @@ const TicketDetailsModal: React.FC<TicketDetailsModalProps> = ({
                 </span>
               </p>
               <p><span className="font-medium">Category:</span> {ticket.category}</p>
-              <p><span className="font-medium">Submitted:</span> {ticket.dateSubmitted}</p>
-              <p><span className="font-medium">Last Updated:</span> {ticket.lastUpdated}</p>
+              <p><span className="font-medium">Submitted:</span> {new Date(ticket.dateSubmitted).toLocaleString()}</p>
+              <p><span className="font-medium">Last Updated:</span> {new Date(ticket.lastUpdated).toLocaleString()}</p>
             </div>
           </div>
           
@@ -142,16 +273,14 @@ const TicketDetailsModal: React.FC<TicketDetailsModalProps> = ({
               <h3 className="text-lg font-medium mb-2">Attachments</h3>
               <div className="flex flex-wrap gap-2">
                 {ticket.attachments.map(attachment => (
-                  <a 
+                  <button 
                     key={attachment.id}
-                    href={attachment.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                    onClick={() => handleDownloadAttachment(attachment)}
                     className="flex items-center bg-gray-100 px-3 py-2 rounded-md text-sm hover:bg-gray-200"
                   >
                     <span className="mr-2">📎</span>
                     {attachment.name}
-                  </a>
+                  </button>
                 ))}
               </div>
             </div>
@@ -164,35 +293,51 @@ const TicketDetailsModal: React.FC<TicketDetailsModalProps> = ({
               placeholder="Type your reply here..."
               value={replyText}
               onChange={(e) => setReplyText(e.target.value)}
+              disabled={ticket.status === 'Closed'}
             ></textarea>
+            {ticket.status === 'Closed' && (
+              <p className="text-sm text-gray-500 mt-1">This ticket is closed. Reopen it to reply.</p>
+            )}
           </div>
           
           <div className="flex flex-wrap justify-between gap-3">
             <div className="flex flex-wrap gap-2">
               <button 
                 onClick={handleReply}
-                disabled={!replyText.trim()}
+                disabled={!replyText.trim() || ticket.status === 'Closed' || sendingReply}
                 className={`flex items-center px-4 py-2 rounded-md text-sm font-medium ${
-                  replyText.trim() 
+                  replyText.trim() && ticket.status !== 'Closed' && !sendingReply
                     ? 'bg-indigo-600 text-white hover:bg-indigo-700' 
                     : 'bg-gray-200 text-gray-500 cursor-not-allowed'
                 }`}
               >
                 <PaperAirplaneIcon className="h-4 w-4 mr-1" />
-                Reply
+                {sendingReply ? 'Sending...' : 'Reply'}
               </button>
               
-              <button 
-                onClick={() => onStatusChange(ticket.id, 'Closed')}
-                className="flex items-center bg-gray-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-gray-700"
-              >
-                <XCircleIcon className="h-4 w-4 mr-1" />
-                Close Ticket
-              </button>
+              {ticket.status !== 'Closed' && (
+                <button 
+                  onClick={() => onStatusChange(ticket.id, 'Closed')}
+                  className="flex items-center bg-gray-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-gray-700"
+                >
+                  <XCircleIcon className="h-4 w-4 mr-1" />
+                  Close Ticket
+                </button>
+              )}
+              
+              {ticket.status === 'Closed' && (
+                <button 
+                  onClick={() => onStatusChange(ticket.id, 'Open')}
+                  className="flex items-center bg-green-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-green-700"
+                >
+                  <ClockIcon className="h-4 w-4 mr-1" />
+                  Reopen Ticket
+                </button>
+              )}
             </div>
             
             <div className="flex flex-wrap gap-2">
-              {ticket.status !== 'In Progress' && (
+              {ticket.status !== 'In Progress' && ticket.status !== 'Closed' && (
                 <button 
                   onClick={() => onStatusChange(ticket.id, 'In Progress')}
                   className="flex items-center bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-blue-700"
@@ -217,169 +362,101 @@ const TicketDetailsModal: React.FC<TicketDetailsModalProps> = ({
 };
 
 const SupportTickets = () => {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [sortField, setSortField] = useState<SortField>('dateSubmitted');
-  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
-  const [selectedStatus, setSelectedStatus] = useState<string>('All');
-  const [viewingTicket, setViewingTicket] = useState<Ticket | null>(null);
+  const [tickets, setTickets] = useState<SupportTicket[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('All');
+  const [priorityFilter, setPriorityFilter] = useState<string>('All');
   
-  // Mock tickets data
-  const [tickets, setTickets] = useState<Ticket[]>([
-    {
-      id: "TKT-1001",
-      userId: "USR-2201",
-      userName: "John Smith",
-      userEmail: "john@example.com",
-      subject: "Unable to complete checkout process",
-      message: "I've been trying to complete a purchase of baseball cards, but when I reach the payment screen, I get an error message saying 'Transaction cannot be processed'. I've tried different cards and even PayPal, but nothing works.\n\nCan you please help me resolve this? I really want to complete this purchase.",
-      status: "Open",
-      priority: "High",
-      dateSubmitted: "2023-07-15 14:32",
-      lastUpdated: "2023-07-15 14:32",
-      category: "Payment Issues",
-      attachments: [
-        {
-          id: "ATT-101",
-          name: "checkout_error.png",
-          type: "image/png",
-          url: "#"
-        }
-      ]
-    },
-    {
-      id: "TKT-1002",
-      userId: "USR-1548",
-      userName: "Sarah Jones",
-      userEmail: "sarah@example.com",
-      subject: "Request for refund",
-      message: "I received my order yesterday (Order #ORD-8873), but the cards were not in the condition described. The corners are damaged and there are visible scratches on several of the cards.\n\nI'd like to request a refund as the items are not as described in the listing.",
-      status: "In Progress",
-      priority: "Medium",
-      dateSubmitted: "2023-07-13 09:15",
-      lastUpdated: "2023-07-14 11:22",
-      category: "Refund Request",
-      attachments: [
-        {
-          id: "ATT-201",
-          name: "damaged_card1.jpg",
-          type: "image/jpeg",
-          url: "#"
-        },
-        {
-          id: "ATT-202",
-          name: "damaged_card2.jpg",
-          type: "image/jpeg",
-          url: "#"
-        }
-      ]
-    },
-    {
-      id: "TKT-1003",
-      userId: "USR-9987",
-      userName: "Mike Johnson",
-      userEmail: "mike@example.com",
-      subject: "Question about seller fees",
-      message: "I'm considering upgrading my seller account to the Pro tier, but I'm unclear about the transaction fees. Does the 5% fee apply to the total transaction including shipping, or just the item price?\n\nAlso, are there any additional fees I should be aware of?",
-      status: "Closed",
-      priority: "Low",
-      dateSubmitted: "2023-07-10 15:47",
-      lastUpdated: "2023-07-12 10:33",
-      category: "Seller Inquiry",
-      attachments: []
-    },
-    {
-      id: "TKT-1004",
-      userId: "USR-3301",
-      userName: "Emily Wilson",
-      userEmail: "emily@example.com",
-      subject: "Missing item in shipment",
-      message: "I received my order today (Order #ORD-7752), but one of the items is missing. I ordered 5 different cards, but only received 4 in the package.\n\nThe missing card is a 2021 Topps Gold Label Class 2 #15 which was listed at $18.99. Please advise on how to resolve this issue.",
-      status: "Open",
-      priority: "Urgent",
-      dateSubmitted: "2023-07-14 16:22",
-      lastUpdated: "2023-07-14 16:22",
-      category: "Order Issues",
-      attachments: [
-        {
-          id: "ATT-301",
-          name: "packing_slip.pdf",
-          type: "application/pdf",
-          url: "#"
-        }
-      ]
-    },
-    {
-      id: "TKT-1005",
-      userId: "USR-4488",
-      userName: "Robert Chen",
-      userEmail: "robert@example.com",
-      subject: "Account verification problems",
-      message: "I've been trying to verify my account for the past week but keep receiving an error. I've uploaded my ID as requested, but the verification never completes. This is preventing me from listing my cards for sale.\n\nI've already tried different browsers and devices, but still have the same issue.",
-      status: "In Progress",
-      priority: "High",
-      dateSubmitted: "2023-07-12 11:08",
-      lastUpdated: "2023-07-13 14:15",
-      category: "Account Issues",
-      attachments: []
-    }
-  ]);
-  
-  // Filter and sort tickets
-  const filteredAndSortedTickets = [...tickets]
-    .filter(ticket => 
-      (selectedStatus === 'All' || ticket.status === selectedStatus) &&
-      (ticket.id.toLowerCase().includes(searchTerm.toLowerCase()) || 
-       ticket.userName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-       ticket.subject.toLowerCase().includes(searchTerm.toLowerCase()))
-    )
-    .sort((a, b) => {
-      const aValue = a[sortField];
-      const bValue = b[sortField];
+  // Fetch tickets from API
+  const fetchTickets = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      // Build query parameters for filtering
+      const params = new URLSearchParams();
+      if (statusFilter !== 'All') params.append('status', statusFilter);
+      if (priorityFilter !== 'All') params.append('priority', priorityFilter);
+      if (searchTerm) params.append('search', searchTerm);
       
-      if (sortDirection === 'asc') {
-        return aValue < bValue ? -1 : aValue > bValue ? 1 : 0;
-      } else {
-        return aValue > bValue ? -1 : aValue < bValue ? 1 : 0;
+      const response = await axios.get(`/api/support-tickets?${params.toString()}`);
+      setTickets(response.data.tickets);
+    } catch (err) {
+      console.error('Error fetching tickets:', err);
+      setError('Failed to load support tickets. Please try again later.');
+      // Fall back to mock data in development
+      if (process.env.NODE_ENV === 'development') {
+        setTickets(MOCK_TICKETS);
       }
-    });
-  
-  const handleSort = (field: SortField) => {
-    if (field === sortField) {
-      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortField(field);
-      setSortDirection('asc');
+    } finally {
+      setLoading(false);
     }
   };
   
-  const handleViewDetails = (ticket: Ticket) => {
-    setViewingTicket(ticket);
+  useEffect(() => {
+    fetchTickets();
+  }, [statusFilter, priorityFilter]); // Re-fetch when filters change
+  
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    fetchTickets();
+  };
+  
+  const handleStatusChange = async (ticketId: string, newStatus: string) => {
+    try {
+      await axios.patch(`/api/support-tickets/${ticketId}/status`, { 
+        status: newStatus 
+      });
+      
+      // Update local state
+      setTickets(tickets.map(ticket => 
+        ticket.id === ticketId 
+          ? { ...ticket, status: newStatus, lastUpdated: new Date().toISOString() } 
+          : ticket
+      ));
+      
+      // Update selected ticket if modal is open
+      if (selectedTicket && selectedTicket.id === ticketId) {
+        setSelectedTicket({
+          ...selectedTicket,
+          status: newStatus,
+          lastUpdated: new Date().toISOString()
+        });
+      }
+    } catch (err) {
+      console.error('Error updating ticket status:', err);
+      alert('Failed to update ticket status. Please try again.');
+    }
+  };
+  
+  const openTicketDetails = (ticket: SupportTicket) => {
+    setSelectedTicket(ticket);
     setIsModalOpen(true);
   };
   
-  const handleStatusChange = (ticketId: string, newStatus: 'Open' | 'In Progress' | 'Closed') => {
-    const updatedTickets = tickets.map(ticket => 
-      ticket.id === ticketId 
-        ? { ...ticket, status: newStatus, lastUpdated: new Date().toLocaleString() } 
-        : ticket
-    );
-    setTickets(updatedTickets);
-    
-    // Update viewing ticket if it's currently being viewed
-    if (viewingTicket && viewingTicket.id === ticketId) {
-      setViewingTicket({ ...viewingTicket, status: newStatus, lastUpdated: new Date().toLocaleString() });
-    }
+  const closeTicketDetails = () => {
+    setIsModalOpen(false);
+    setSelectedTicket(null);
   };
   
-  const renderSortIcon = (field: SortField) => {
-    if (sortField !== field) return null;
+  // Filter tickets based on search term client-side (for immediate feedback)
+  const filteredTickets = tickets.filter(ticket => {
+    const searchFields = [
+      ticket.id,
+      ticket.userName,
+      ticket.userEmail,
+      ticket.subject,
+      ticket.message,
+      ticket.category
+    ].map(field => field.toLowerCase());
     
-    return sortDirection === 'asc' 
-      ? <ArrowUpIcon className="h-4 w-4 inline ml-1" />
-      : <ArrowDownIcon className="h-4 w-4 inline ml-1" />;
-  };
+    return searchFields.some(field => field.includes(searchTerm.toLowerCase()));
+  });
   
+  // Helper functions for styling
   const getStatusClass = (status: string) => {
     switch (status) {
       case 'Open':
@@ -406,7 +483,7 @@ const SupportTickets = () => {
         return 'bg-green-100 text-green-800';
     }
   };
-
+  
   return (
     <AdminLayout>
       <div className="mb-6">
@@ -432,14 +509,37 @@ const SupportTickets = () => {
             <span className="text-sm font-medium text-gray-700 mr-2">Status:</span>
             <select 
               className="border border-gray-300 rounded-md text-sm p-2"
-              value={selectedStatus}
-              onChange={(e) => setSelectedStatus(e.target.value)}
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
             >
               <option value="All">All Statuses</option>
               <option value="Open">Open</option>
               <option value="In Progress">In Progress</option>
               <option value="Closed">Closed</option>
             </select>
+          </div>
+          <div>
+            <span className="text-sm font-medium text-gray-700 mr-2">Priority:</span>
+            <select 
+              className="border border-gray-300 rounded-md text-sm p-2"
+              value={priorityFilter}
+              onChange={(e) => setPriorityFilter(e.target.value)}
+            >
+              <option value="All">All Priorities</option>
+              <option value="Urgent">Urgent</option>
+              <option value="High">High</option>
+              <option value="Medium">Medium</option>
+              <option value="Low">Low</option>
+            </select>
+          </div>
+          <div>
+            <button 
+              onClick={fetchTickets}
+              className="bg-white p-2 rounded-md border border-gray-300 text-gray-700 hover:bg-gray-50"
+              title="Refresh tickets"
+            >
+              <ArrowPathIcon className="h-5 w-5" />
+            </button>
           </div>
         </div>
       </div>
@@ -452,44 +552,38 @@ const SupportTickets = () => {
                 <th 
                   scope="col" 
                   className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
-                  onClick={() => handleSort('id')}
                 >
-                  Ticket ID {renderSortIcon('id')}
+                  Ticket ID
                 </th>
                 <th 
                   scope="col" 
                   className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
-                  onClick={() => handleSort('userName')}
                 >
-                  User {renderSortIcon('userName')}
+                  User
                 </th>
                 <th 
                   scope="col" 
                   className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
-                  onClick={() => handleSort('subject')}
                 >
-                  Issue Summary {renderSortIcon('subject')}
+                  Issue Summary
                 </th>
                 <th 
                   scope="col" 
                   className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
-                  onClick={() => handleSort('status')}
                 >
-                  Status {renderSortIcon('status')}
+                  Status
                 </th>
                 <th 
                   scope="col" 
                   className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
-                  onClick={() => handleSort('priority')}
                 >
-                  Priority {renderSortIcon('priority')}
+                  Priority
                 </th>
                 <th 
                   scope="col" 
                   className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
-                  onClick={() => handleSort('dateSubmitted')}
                 >
-                  Date Submitted {renderSortIcon('dateSubmitted')}
+                  Date Submitted
                 </th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Actions
@@ -497,7 +591,7 @@ const SupportTickets = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {filteredAndSortedTickets.map((ticket) => (
+              {filteredTickets.map((ticket) => (
                 <tr key={ticket.id}>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm font-medium text-gray-900">{ticket.id}</div>
@@ -508,7 +602,6 @@ const SupportTickets = () => {
                   </td>
                   <td className="px-6 py-4">
                     <div className="text-sm text-gray-900">{ticket.subject}</div>
-                    <div className="text-xs text-gray-500">{ticket.category}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusClass(ticket.status)}`}>
@@ -525,7 +618,7 @@ const SupportTickets = () => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <button 
-                      onClick={() => handleViewDetails(ticket)}
+                      onClick={() => openTicketDetails(ticket)}
                       className="inline-flex items-center bg-indigo-100 hover:bg-indigo-200 text-indigo-700 font-medium py-1 px-3 rounded text-xs"
                     >
                       <EyeIcon className="h-3.5 w-3.5 mr-1" />
@@ -540,9 +633,9 @@ const SupportTickets = () => {
       </div>
       
       <TicketDetailsModal 
-        ticket={viewingTicket}
+        ticket={selectedTicket}
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
+        onClose={closeTicketDetails}
         onStatusChange={handleStatusChange}
       />
     </AdminLayout>

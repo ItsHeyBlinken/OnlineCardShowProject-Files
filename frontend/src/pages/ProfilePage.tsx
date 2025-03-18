@@ -4,6 +4,7 @@ import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
 import BackToDashboardButton from '../components/common/BackToDashboardButton';
 import ShippingAddressForm from '../components/profile/ShippingAddressForm';
+import ReportIssueButton from '../components/ReportIssueButton';
 
 const defaultImage = '/images/logo1.jpg';
 
@@ -235,6 +236,14 @@ export const ProfilePage = () => {
             >
               View Order History
             </Link>
+
+            {/* Report Issue Button */}
+            <ReportIssueButton 
+              userId={user?.id ? String(user.id) : ''}
+              userName={user?.name || ''}
+              userEmail={user?.email || ''}
+              variant="small"
+            />
 
             {/* Add Seller Dashboard Button for sellers */}
             {user?.role === 'seller' && (
