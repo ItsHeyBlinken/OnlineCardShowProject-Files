@@ -3,13 +3,13 @@ const router = express.Router();
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
-const db = require('../../db');
-const auth = require('../../middleware/auth');
+const db = require('../db');
+const { authenticateToken } = require('../middleware/authMiddleware');
 
 // Configure storage for file uploads
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    const uploadDir = path.join(__dirname, '../../uploads/support-tickets');
+    const uploadDir = path.join(__dirname, '../uploads/support-tickets');
     
     // Create directory if it doesn't exist
     if (!fs.existsSync(uploadDir)) {
@@ -47,7 +47,7 @@ const upload = multer({
 });
 
 // POST /api/report-issue
-router.post('/', auth.authenticateToken, upload.single('attachment'), async (req, res) => {
+router.post('/', authenticateToken, upload.single('attachment'), async (req, res) => {
   try {
     const { subject, message, category, priority = 'Medium' } = req.body;
     const userId = req.user.id;

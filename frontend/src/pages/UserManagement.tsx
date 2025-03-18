@@ -329,7 +329,7 @@ const UserManagement = () => {
                         ))}
                     </tbody>
                 </table>
-            </div>
+        </div>
             
             <EditModal 
                 user={editingUser}

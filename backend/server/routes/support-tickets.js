@@ -3,13 +3,13 @@ const router = express.Router();
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
-const db = require('../../db');
-const auth = require('../../middleware/auth');
+const db = require('../db');
+const { authenticateToken } = require('../middleware/authMiddleware');
 
 // Configure storage for file uploads
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    const uploadDir = path.join(__dirname, '../../uploads/support-tickets');
+    const uploadDir = path.join(__dirname, '../uploads/support-tickets');
     
     // Create directory if it doesn't exist
     if (!fs.existsSync(uploadDir)) {
@@ -47,7 +47,7 @@ const upload = multer({
 });
 
 // GET all support tickets with optional filtering
-router.get('/', auth.authenticateToken, async (req, res) => {
+router.get('/', authenticateToken, async (req, res) => {
   try {
     const { status, priority, search, user_id } = req.query;
     let query = `
@@ -138,7 +138,7 @@ router.get('/', auth.authenticateToken, async (req, res) => {
 });
 
 // GET a single ticket by ID
-router.get('/:id', auth.authenticateToken, async (req, res) => {
+router.get('/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
     
@@ -199,64 +199,8 @@ router.get('/:id', auth.authenticateToken, async (req, res) => {
   }
 });
 
-// POST create a new support ticket
-router.post('/', auth.authenticateToken, upload.single('attachment'), async (req, res) => {
-  try {
-    const { subject, message, category, priority = 'Medium' } = req.body;
-    const userId = req.user.id;
-    
-    // Validate input
-    if (!subject || !message) {
-      return res.status(400).json({ error: 'Subject and message are required' });
-    }
-    
-    // Create ticket
-    const ticketQuery = `
-      INSERT INTO support_tickets (
-        user_id, subject, message, category, priority, status, 
-        date_submitted, last_updated
-      )
-      VALUES ($1, $2, $3, $4, $5, 'Open', NOW(), NOW())
-      RETURNING id
-    `;
-    
-    const ticketValues = [userId, subject, message, category, priority];
-    const ticketResult = await db.query(ticketQuery, ticketValues);
-    const ticketId = ticketResult.rows[0].id;
-    
-    // Save attachment if provided
-    if (req.file) {
-      const { filename, path: filepath, size, mimetype } = req.file;
-      const filepathRelative = filepath.split('/uploads/support-tickets/')[1];
-      
-      const attachmentQuery = `
-        INSERT INTO support_ticket_attachments (
-          ticket_id, filename, filepath, filesize, filetype
-        )
-        VALUES ($1, $2, $3, $4, $5)
-      `;
-      
-      await db.query(attachmentQuery, [
-        ticketId, 
-        filename,
-        filepathRelative,
-        size,
-        mimetype
-      ]);
-    }
-    
-    res.status(201).json({ 
-      message: 'Support ticket created successfully',
-      ticketId
-    });
-  } catch (error) {
-    console.error('Error creating support ticket:', error);
-    res.status(500).json({ error: 'Failed to create support ticket' });
-  }
-});
-
 // PATCH update ticket status
-router.patch('/:id/status', auth.authenticateToken, async (req, res) => {
+router.patch('/:id/status', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
     const { status } = req.body;
@@ -295,7 +239,7 @@ router.patch('/:id/status', auth.authenticateToken, async (req, res) => {
 });
 
 // POST add reply to ticket
-router.post('/:id/replies', auth.authenticateToken, async (req, res) => {
+router.post('/:id/replies', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
     const { message } = req.body;
@@ -353,7 +297,7 @@ router.post('/:id/replies', auth.authenticateToken, async (req, res) => {
 });
 
 // GET download attachment file
-router.get('/:ticketId/attachments/:filename', auth.authenticateToken, async (req, res) => {
+router.get('/:ticketId/attachments/:filename', authenticateToken, async (req, res) => {
   try {
     const { ticketId, filename } = req.params;
     
@@ -373,7 +317,7 @@ router.get('/:ticketId/attachments/:filename', auth.authenticateToken, async (re
     const attachment = rows[0];
     const filePath = path.join(
       __dirname, 
-      '../../uploads/support-tickets', 
+      '../uploads/support-tickets', 
       attachment.filepath
     );
     
