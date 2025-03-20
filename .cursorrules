@@ -1,0 +1,43 @@
+# Project Intelligence: Online Card Show
+
+## Project Structure
+- Frontend and backend are in separate directories
+- Database schema is defined in DataBase_Schema.csv
+- Memory bank documentation is stored in the memory-bank/ directory
+
+## Code Conventions
+- Use camelCase for variables and functions
+- Use PascalCase for React components and classes
+- Follow standard Express.js patterns for API endpoints
+- Use async/await for asynchronous operations
+- Implement proper error handling with try/catch blocks
+
+## Feature Implementation Paths
+- User authentication will use JWT with refresh tokens
+- Database models will be implemented using Sequelize ORM
+- Frontend state management will use Redux
+- File uploads will be handled with Multer
+- API structure will follow RESTful principles
+
+## Project-Specific Patterns
+- All API endpoints should include proper validation
+- User roles will control access to different features
+- Subscription tiers will dictate feature availability
+- High-quality image handling is critical for card listings
+- Real-time features will use WebSockets
+
+## Known Challenges
+- Handling high-resolution images efficiently
+- Implementing secure payment processing
+- Scaling the search functionality for large inventories
+- Managing subscription billing and renewals
+- Ensuring mobile responsiveness for complex listing pages
+
+## User Preferences
+- Clean, professional design focused on the cards/collectibles
+- Fast and responsive user interface
+- Intuitive navigation and search
+- Secure payment and authentication
+- Community-focused features
+
+This document will evolve as we discover more patterns and preferences throughout the development process. 

@@ -4,7 +4,6 @@ import { useStoreCustomization, StoreCustomization } from '../hooks/useStoreCust
 import { handleApiError } from '../utils/errorHandler';
 import ImageWithFallback from '../components/common/ImageWithFallback';
 import BackToDashboardButton from '../components/common/BackToDashboardButton';
-import { User } from '../types';
 
 type SubscriptionTier = 'Free' | 'Basic' | 'Pro' | 'Premium';
 
@@ -28,8 +27,8 @@ export const SellerCustomizationPage = () => {
   // Use a default tier if user is null or subscriptionTier is not set
   const userTier = (user?.subscriptionTier as SubscriptionTier) || 'Free';
   
-  // Get storeId from user object with fallback to empty string
-  const storeId = user?.storeId || '';
+  // Using user ID as store ID
+  const storeId = user?.id?.toString() || '';
   
   const { customization, updateCustomization, loading, error } = useStoreCustomization(storeId);
   const [, setSaving] = useState(false);
