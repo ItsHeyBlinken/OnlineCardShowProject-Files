@@ -8,7 +8,7 @@ Online Card Show is a subscription-based e-commerce platform designed as a direc
 ### Business Model
 - Subscription-based revenue model
 - Multiple subscription tiers with different features and benefits
-- Commission structure on sales (potentially lower than competitors)
+- Escrow system for high-value transactions
 
 ### Key Features
 - User authentication and profile management
