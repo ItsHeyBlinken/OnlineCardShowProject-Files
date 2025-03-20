@@ -18,12 +18,12 @@ const SellerRegistrationComplete: React.FC = () => {
         
         // Debug info - current user
         console.log('Current user on registration complete page:', user);
-        setDebug(prev => ({ ...prev, user }));
+        setDebug((prev: any) => ({ ...prev, user }));
         
         // Get the stored seller details
         const sellerDetailsString = sessionStorage.getItem('sellerDetails');
         console.log('Session storage data exists:', !!sellerDetailsString);
-        setDebug(prev => ({ ...prev, hasSessionData: !!sellerDetailsString }));
+        setDebug((prev: any) => ({ ...prev, hasSessionData: !!sellerDetailsString }));
         
         if (!sellerDetailsString) {
           throw new Error('Seller details not found. Please try the registration process again.');
@@ -31,7 +31,7 @@ const SellerRegistrationComplete: React.FC = () => {
         
         const sellerDetails = JSON.parse(sellerDetailsString);
         console.log('Retrieved seller details from session storage:', sellerDetails);
-        setDebug(prev => ({ ...prev, sellerDetails }));
+        setDebug((prev: any) => ({ ...prev, sellerDetails }));
         
         // Check if user already has a subscription in our database
         let subscriptionActive = false;
@@ -46,7 +46,7 @@ const SellerRegistrationComplete: React.FC = () => {
           try {
             const subscriptionResponse = await axios.get('/api/users/subscription');
             console.log('Subscription response from /api/users/subscription:', subscriptionResponse.data);
-            setDebug(prev => ({ ...prev, subscriptionResponse: subscriptionResponse.data }));
+            setDebug((prev: any) => ({ ...prev, subscriptionResponse: subscriptionResponse.data }));
             
             if (subscriptionResponse.data && 
                 subscriptionResponse.data.tier && 
@@ -60,7 +60,7 @@ const SellerRegistrationComplete: React.FC = () => {
             try {
               const altResponse = await axios.get('/api/user/subscription');
               console.log('Subscription response from /api/user/subscription:', altResponse.data);
-              setDebug(prev => ({ ...prev, altSubscriptionResponse: altResponse.data }));
+              setDebug((prev: any) => ({ ...prev, altSubscriptionResponse: altResponse.data }));
               
               if (altResponse.data && 
                   altResponse.data.tier && 
@@ -70,7 +70,7 @@ const SellerRegistrationComplete: React.FC = () => {
               }
             } catch (altEndpointError) {
               console.log('Both subscription endpoints failed:', userEndpointError, altEndpointError);
-              setDebug(prev => ({ 
+              setDebug((prev: any) => ({ 
                 ...prev, 
                 userEndpointError, 
                 altEndpointError 
@@ -79,7 +79,7 @@ const SellerRegistrationComplete: React.FC = () => {
           }
         } catch (subError) {
           console.log('Error checking subscription:', subError);
-          setDebug(prev => ({ ...prev, subscriptionError: subError }));
+          setDebug((prev: any) => ({ ...prev, subscriptionError: subError }));
         }
         
         // Register as a seller
@@ -104,7 +104,7 @@ const SellerRegistrationComplete: React.FC = () => {
         });
         
         console.log('Seller registration response:', response.data);
-        setDebug(prev => ({ ...prev, becomeSellerResponse: response.data }));
+        setDebug((prev: any) => ({ ...prev, becomeSellerResponse: response.data }));
         
         // Clear the session storage
         sessionStorage.removeItem('sellerDetails');
@@ -116,7 +116,7 @@ const SellerRegistrationComplete: React.FC = () => {
         // Get updated user info after checkAuth
         const currentUser = await axios.get('/api/auth/current-user');
         console.log('User after checkAuth:', currentUser.data);
-        setDebug(prev => ({ ...prev, updatedUser: currentUser.data }));
+        setDebug((prev: any) => ({ ...prev, updatedUser: currentUser.data }));
         
         // Redirect to seller dashboard
         setStatus('Redirecting to dashboard...');
@@ -130,7 +130,7 @@ const SellerRegistrationComplete: React.FC = () => {
         if (error.response) {
           console.error('Error response data:', error.response.data);
           console.error('Error response status:', error.response.status);
-          setDebug(prev => ({ 
+          setDebug((prev: any) => ({ 
             ...prev, 
             errorData: error.response.data, 
             errorStatus: error.response.status 
