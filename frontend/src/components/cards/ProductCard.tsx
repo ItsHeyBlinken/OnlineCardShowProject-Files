@@ -1,6 +1,8 @@
-import React from 'react'
+import React, { Suspense } from 'react'
 import { Link } from 'react-router-dom'
 import { Tag } from 'lucide-react'
+
+const LazyImage = React.lazy(() => import('./LazyImage'))
 
 interface ProductCardProps {
   id: string
@@ -16,7 +18,7 @@ interface ProductCardProps {
   offersFreeShipping?: boolean
 }
 
-export const ProductCard = ({ 
+export const ProductCard: React.FC<ProductCardProps> = ({ 
   id, 
   title, 
   price, 
@@ -28,18 +30,16 @@ export const ProductCard = ({
   playerName,
   cardNumber,
   offersFreeShipping
-}: ProductCardProps) => {
+}) => {
   const discountedPrice = discount ? price - (price * discount) / 100 : price
 
   return (
     <Link to={`/listing/${id}`} className="block">
       <div className="rounded-lg border bg-white shadow-sm transition-shadow hover:shadow-md">
         <div className="relative">
-          <img
-            src={image}
-            alt={title}
-            className="h-48 w-full rounded-t-lg object-cover"
-          />
+          <Suspense fallback={<div>Loading...</div>}>
+            <LazyImage src={image} alt={title} className="h-48 w-full rounded-t-lg object-cover" />
+          </Suspense>
           {discount && (
             <div className="absolute top-2 right-2 bg-red-500 text-white px-2 py-1 rounded-md text-sm font-medium">
               {discount}% OFF

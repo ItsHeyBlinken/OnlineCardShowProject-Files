@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useHistory } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { useCart } from '../../contexts/CartContext';
@@ -15,6 +15,16 @@ const Navbar = () => {
     const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setSearchQuery(e.target.value);
     };
+
+    useEffect(() => {
+        const handler = setTimeout(() => {
+            // Call API with searchQuery
+        }, 300);
+
+        return () => {
+            clearTimeout(handler);
+        };
+    }, [searchQuery]);
 
     const handleLogout = async () => {
         try {
