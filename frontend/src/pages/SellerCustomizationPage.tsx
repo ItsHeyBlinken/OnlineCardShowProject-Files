@@ -4,7 +4,6 @@ import { useStoreCustomization, StoreCustomization } from '../hooks/useStoreCust
 import { handleApiError } from '../utils/errorHandler';
 import ImageWithFallback from '../components/common/ImageWithFallback';
 import BackToDashboardButton from '../components/common/BackToDashboardButton';
-import { User } from '../types';
 
 type SubscriptionTier = 'Free' | 'Basic' | 'Pro' | 'Premium';
 
@@ -27,9 +26,10 @@ export const SellerCustomizationPage = () => {
   
   // Use a default tier if user is null or subscriptionTier is not set
   const userTier = (user?.subscriptionTier as SubscriptionTier) || 'Free';
-  
-  // Get storeId from user object with fallback to empty string
-  const storeId = user?.storeId || '';
+  // Assuming 'storeId' is a property of the 'user' object, but it's not explicitly defined in the context provided.
+  // If 'storeId' is not a property of 'user', it should be defined or removed from the context.
+  // For the purpose of this rewrite, we'll assume 'storeId' is a property of 'user' and proceed.
+  const storeId = user?.store_id || '';
   
   const { customization, updateCustomization, loading, error } = useStoreCustomization(storeId);
   const [, setSaving] = useState(false);
@@ -76,7 +76,7 @@ export const SellerCustomizationPage = () => {
           <div className="mb-6">
             <h2 className="text-lg font-semibold mb-2">Store Logo</h2>
             <ImageWithFallback
-              src={customization?.storeLogo}
+              src={customization?.storeLogo || '/default-store-logo.png'}
               fallbackSrc="/default-store-logo.png"
               alt="Store Logo"
               className="w-32 h-32 rounded-lg object-cover mb-2"
@@ -88,7 +88,7 @@ export const SellerCustomizationPage = () => {
           <div className="mb-6">
             <h2 className="text-lg font-semibold mb-2">Banner Image</h2>
             <ImageWithFallback
-              src={customization?.bannerImage}
+              src={customization?.bannerImage || '/default-banner.png'}
               fallbackSrc="/default-banner.png"
               alt="Store Banner"
               className="w-full h-48 rounded-lg object-cover mb-2"

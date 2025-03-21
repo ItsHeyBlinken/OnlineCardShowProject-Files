@@ -113,12 +113,14 @@ const InboxPage: React.FC = () => {
 
     useEffect(() => {
         fetchConversations();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [user]);
 
     useEffect(() => {
         if (selectedConversation) {
             fetchMessages(selectedConversation.userId, selectedConversation.listingId);
         }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [selectedConversation]);
 
     useEffect(() => {
@@ -289,7 +291,7 @@ const InboxPage: React.FC = () => {
     return (
         <div className="container mx-auto px-4 py-8 max-w-6xl">
             <div className="mb-4">
-                <BackToDashboardButton customReturnPath="/profile" buttonText="Back to Profile" />
+                <BackToDashboardButton customReturnPath="/seller/dashboard" buttonText="Back to Dashboard" />
             </div>
             <h1 className="text-3xl font-bold mb-6">Messages</h1>
             

@@ -1,16 +1,25 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
-import { User as UserType } from '../types';
 
 // Extend the User type from types/index.ts with additional properties needed in AuthContext
-interface User extends UserType {
+interface User {
+  id: number;
+  email: string;
+  username: string;
+  role: string;
+  subscriptionTier?: string;
+  subscription_id?: string;
+  subscription_status?: string;
+  subscription_period_end?: string;
+  pending_subscription_tier?: string;
   name?: string;
   created_at?: string;
-  favoriteSport?: string | null;
-  favoriteTeam?: string | null;
-  favoritePlayers?: string | null;
-  image_url?: string | null;
+  favoriteSport?: string;
+  favoriteTeam?: string;
+  favoritePlayers?: string;
+  image_url?: string;
   is_seller?: boolean;
+  store_id?: string;
 }
 
 interface AuthContextType {

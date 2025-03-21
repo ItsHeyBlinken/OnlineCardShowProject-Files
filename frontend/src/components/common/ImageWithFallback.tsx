@@ -1,16 +1,27 @@
-import React from 'react';
+import React, { useState } from 'react';
 
-interface ImageWithFallbackProps extends React.ImgHTMLAttributes<HTMLImageElement> {
+interface ImageWithFallbackProps {
+  src: string;
   fallbackSrc: string;
+  alt: string;
+  className?: string;
 }
 
-const ImageWithFallback: React.FC<ImageWithFallbackProps> = ({ src, fallbackSrc, alt, ...props }) => {
-  const handleError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
-    const target = e.target as HTMLImageElement;
-    target.src = fallbackSrc;
+const ImageWithFallback: React.FC<ImageWithFallbackProps> = ({ src, fallbackSrc, alt, className }) => {
+  const [imgSrc, setImgSrc] = useState(src);
+
+  const handleError = () => {
+    setImgSrc(fallbackSrc);
   };
 
-  return <img src={src} alt={alt} onError={handleError} {...props} />;
+  return (
+    <img
+      src={imgSrc}
+      alt={alt}
+      className={className}
+      onError={handleError}
+    />
+  );
 };
 
 export default ImageWithFallback;
