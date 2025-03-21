@@ -2,7 +2,7 @@ import React, { Suspense } from 'react'
 import { Link } from 'react-router-dom'
 import { Tag } from 'lucide-react'
 
-const LazyImage = React.lazy(() => import('./LazyImage'))
+const LazyImage = React.lazy(() => import('../common/LazyImage'))
 
 interface ProductCardProps {
   id: string
