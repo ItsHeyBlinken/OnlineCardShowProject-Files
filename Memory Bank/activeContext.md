@@ -17,6 +17,7 @@
 - Integrated Formik for form handling in the `BuyerProfile` component
 - Ensured proper type definitions for form values
 - Cleaned up unused imports in the `BuyerProfile` component
+- Added Formik to the package.json dependencies
 
 ## Next Steps
 - Set up PostgreSQL database and schema
@@ -26,3 +27,4 @@
 - Set up development environment
 - Configure environment variables
 - Initialize testing framework
+- Implement error handling for API calls in the `BuyerProfile` component
