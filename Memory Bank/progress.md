@@ -15,6 +15,8 @@
 - Memory Bank documentation
 - README documentation
 - Package dependencies defined
+- The `BuyerProfile` component now correctly handles form submissions using Formik.
+- The form fields for the user's profile information and shipping address are functional.
 
 ## What's Left
 - Database setup and configuration
@@ -34,3 +36,7 @@
 - Authentication system not implemented
 - API endpoints not developed
 - Testing framework missing
+
+## What's Left to Build
+- Further testing of the form validation and submission process.
+- Implement error handling for API calls in the `BuyerProfile` component.

@@ -14,6 +14,9 @@
 - Created Memory Bank documentation
 - Added README with project overview
 - Established basic frontend and backend directories
+- Integrated Formik for form handling in the `BuyerProfile` component
+- Ensured proper type definitions for form values
+- Cleaned up unused imports in the `BuyerProfile` component
 
 ## Next Steps
 - Set up PostgreSQL database and schema
