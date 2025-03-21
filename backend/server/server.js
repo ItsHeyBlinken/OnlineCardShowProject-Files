@@ -8,6 +8,9 @@ if (!process.env.JWT_SECRET) {
 
 const express = require('express');
 const cors = require('cors');
+const compression = require('compression');
+const limiter = require('./middleware/rateLimiter');
+const timeoutMiddleware = require('./middleware/timeout');
 const app = express();
 const auth = require('./middleware/auth');
 const { authenticateToken } = require('./middleware/authMiddleware');
@@ -165,6 +168,15 @@ app.use('/api/webhooks', webhookRoutes);
 
 // Then your regular middleware
 app.use(express.json());
+
+// Add compression middleware
+app.use(compression());
+
+// Add rate limiting
+app.use('/api/', limiter);
+
+// Add timeout handling
+app.use(timeoutMiddleware('30s'));
 
 // Serve static files from the uploads directory
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
